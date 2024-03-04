@@ -83,7 +83,7 @@ void loop() {
     // cmd = thr_command;
   } else if (command.startsWith(String(pot_command))) {
     // "pa0"
-    if (cmdlen > 2) {
+    if (cmdlen > 1) {
       String pot_str = command.substring(1);  // Assume there is no space after the 'p'
       pot_str.toLowerCase();
       // // if (pot_str.startsWith("a") && isDigit(pot_str.substring(1))) {}
