@@ -94,7 +94,7 @@ void loop() {
         int analog_pin_num = pot_str.substring(1).toInt();
         POTpin = NUM_DIGITAL_PINS - NUM_ANALOG_INPUTS + analog_pin_num;
       } else if (isDigit(pot_str[0])) {
-        POTpin = pot_str.substring(1).toInt();
+        POTpin = pot_str.substring(0).toInt();
       }
     }
     // cmd = pot_command;
