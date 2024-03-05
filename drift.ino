@@ -12,11 +12,11 @@ unsigned int throttle = 0;
 ESC myESC(ESCpin, SPEED_MIN, SPEED_MAX, ARM_VAL); // ESC_Name (PIN, Minimum Value, Maximum Value, Arm Value)
 
 String command;
-const char arm_command = 'a';  // 1
-const char thr_command = 't';  // 2
-const char pot_command = 'p';  // 3
-const char stop_command = 's';  // 4
-const char calib_command = 'c';  // 5
+const char arm_command = 'a';
+const char thr_command = 't';
+const char pot_command = 'p';
+const char stop_command = 's';
+const char calib_command = 'c';
 const char nothing_to_do = (char)0;
 char cmd = nothing_to_do;  // Default command on first start
 
@@ -31,32 +31,36 @@ void loop() {
     case arm_command:
       myESC.arm(); // Send the Arm value
       Serial.println("Sending ARM command");
+      cmd = nothing_to_do;
       break;
     case thr_command:
-      Serial.print("Set throttle value to ");
+      Serial.print("Set throttle to ");
       Serial.println(throttle);
       myESC.speed(throttle); // sets the ESC speed according to the scaled value
+      cmd = nothing_to_do;
       break;
     case pot_command:
       pot_value = analogRead(POTpin);
       throttle = map(pot_value, 0, 1023, SPEED_MIN, SPEED_MAX);
       Serial.print("Reading pin ");
       Serial.print(POTpin);
-      Serial.print(" - Set throttle value to ");
+      Serial.print(" - Set throttle to ");
       Serial.println(throttle);
       myESC.speed(throttle); // sets the ESC speed according to the scaled value
       break;
     case stop_command:
       myESC.stop(); // Send the Stop value
       Serial.println("Sending STOP command");
+      cmd = nothing_to_do;
       break;
     case calib_command:
       myESC.calib(); // Calibrate
       Serial.println("Throttle calibration");
       // cmd = arm_command; // Arm after calibration?
+      cmd = nothing_to_do;
       break;
     case nothing_to_do:
-      Serial.println(" - doing nothing");
+      // Serial.println("Nothing to do");
       break;
     default:
       Serial.print("Unrecognized command! cmd = '");
