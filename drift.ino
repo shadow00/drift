@@ -17,6 +17,7 @@ const char thr_command = 't';
 const char pot_command = 'p';
 const char stop_command = 's';
 const char calib_command = 'c';
+const char escpin_command = 'e';
 const char nothing_to_do = (char)0;
 char cmd = nothing_to_do;  // Default command on first start
 
@@ -58,6 +59,17 @@ void loop() {
       Serial.println("Throttle calibration");
       // cmd = arm_command; // Arm after calibration?
       cmd = nothing_to_do;
+      break;
+    case escpin_command:
+      if (ESCpin > 1 && ESCpin <= NUM_DIGITAL_PINS) {
+        Serial.print("Setting ESC to pin ");
+        Serial.println(ESCpin);
+        cmd = nothing_to_do;
+      } else {
+        Serial.print("WARNING: Invalid ESC pin ");
+        Serial.println(ESCpin);
+        cmd = nothing_to_do;
+      }
       break;
     case nothing_to_do:
       // Serial.println("Nothing to do");
@@ -107,6 +119,12 @@ void loop() {
     // cmd = stop_command;
   } else if (command.startsWith(String(calib_command))) {
     // cmd = calib_command;
+  } else if (command.startsWith(String(escpin_command))) {
+    // myESC.~ESC();
+    // Warning: no error checking. If the string is invalid, this will return 0
+    // and it will be rejected in the loop
+    ESCpin = command.substring(1).toInt();
+    myESC = ESC(ESCpin, SPEED_MIN, SPEED_MAX, ARM_VAL); // ESC_Name (PIN, Minimum Value, Maximum Value, Arm Value)
   } else {
     // cmd = wrong_command;
   }
