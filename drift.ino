@@ -95,6 +95,7 @@ void loop() {
       if (pot_str.startsWith("a")) {
         // Analog pins "a0" - "a7" for stuff like Arduino Uno, or "a11" for the Arduino Giga R1
         // https://github.com/arduino/ArduinoCore-avr/blob/master/variants/standard/pins_arduino.h#L28-L72
+        // https://github.com/arduino/ArduinoCore-mbed/blob/main/variants/GIGA/pins_arduino.h#L21-L56
         int analog_pin_num = pot_str.substring(1).toInt();
         POTpin = NUM_DIGITAL_PINS - NUM_ANALOG_INPUTS + analog_pin_num;
       } else if (isDigit(pot_str[0])) {
