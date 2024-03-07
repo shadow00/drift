@@ -23,6 +23,7 @@ char cmd = nothing_to_do;  // Default command on first start
 
 void setup() {
   Serial.begin(115200);  // opens serial port, sets data rate to 9600 bps
+  Serial.setTimeout(10);  // Set timeout to 10ms to waste less time when reading serial input
 }
 
 void loop() {  
