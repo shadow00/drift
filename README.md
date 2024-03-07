@@ -55,3 +55,17 @@ There are a few ways to do this:
   - TODO: try opening the serial connection as a file, and use regular read/write operations?
   
 You can also manually send commands from a terminal like this: `echo "t1000" > /dev/ttyACM0` (this will set the throttle to 1000). Note that this command only *writes* to serial, so you still nead something to read the serial response (either in another terminal, or the Serial Monitor in VSCode/Arduino IDE).
+
+## Notes and links
+
+- The **Servo library** supports up to 12 motors on most Arduino boards and 48 on the Arduino Mega. On boards other than the Mega, **use of the library disables `analogWrite()` (PWM) functionality on pins 9 and 10, whether or not there is a Servo on those pins**. On the Mega, up to 12 servos can be used without interfering with PWM functionality; **use of 12 to 23 motors will disable PWM on pins 11 and 12**. ([source](https://www.arduino.cc/reference/en/libraries/servo/))
+
+### Arduino **Giga**
+- "It should be noted that the internal **operating voltage of the microcontroller is 3.3V**, and you should not apply voltages higher than that to the GPIO pins." ([source](https://docs.arduino.cc/tutorials/giga-r1-wifi/cheat-sheet/#power-supply))
+- As the Arduino Mbed OS GIGA Board Package is based on MbedOS, it is possible for the operating system to crash while running a sketch.  
+On most Arduino boards, when a sketch fails due to e.g. memory shortage, the board resets.  
+On the GIGA R1, **whenever the MbedOS fails, the board does not reset automatically**. Instead, if it fails, the onboard red LED will start to blink in a looping pattern of 4 fast blinks and 4 slow blinks.  
+In case you encounter the red LED, you can either:
+  - Press the reset button once (this resets the sketch).
+  - Double-tap the reset button to enter bootloader mode (allowing you to re-program the board). ([source](https://docs.arduino.cc/tutorials/giga-r1-wifi/cheat-sheet/#mbed-os))
+- The GIGA R1 has 12 PWM capable pins, the PWM capable pins are 2-13. ([source](https://docs.arduino.cc/tutorials/giga-r1-wifi/cheat-sheet/#pwm-pins))
