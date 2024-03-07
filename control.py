@@ -24,8 +24,8 @@ for string in strings_to_send:
     # Either read the lines from here (don't need to print them out though),
     # OR open the serial monitor in the Arduino IDE/vscode/tty emulator/whatever
     # BUT NEVER OPEN TWO READERS AT THE SAME TIME
-    resp = ser.readline()
-    print(resp.decode('ascii').rstrip())
+    # resp = ser.readline()
+    # print(resp.decode('ascii').rstrip())
     time.sleep(delay)
 
 # Close the serial port
