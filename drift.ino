@@ -20,6 +20,8 @@ const char calib_command = 'c';
 const char escpin_command = 'e';
 const char nothing_to_do = (char)0;
 char cmd = nothing_to_do;  // Default command on first start
+String thr_str;
+String pot_str;
 
 void setup() {
   Serial.begin(115200);  // opens serial port, sets data rate to 9600 bps
@@ -36,18 +38,20 @@ void loop() {
       cmd = nothing_to_do;
       break;
     case thr_command:
-      Serial.print("Set throttle to ");
-      Serial.println(throttle);
+      thr_str = "Set throttle to ";
+      thr_str.concat(throttle);
+      Serial.println(thr_str);
       myESC.speed(throttle); // sets the ESC speed according to the scaled value
       cmd = nothing_to_do;
       break;
     case pot_command:
       pot_value = analogRead(POTpin);
       throttle = map(pot_value, 0, 1023, SPEED_MIN, SPEED_MAX);
-      Serial.print("Reading pin ");
-      Serial.print(POTpin);
-      Serial.print(" - Set throttle to ");
-      Serial.println(throttle);
+      pot_str = "Pin ";
+      pot_str.concat(POTpin);
+      pot_str.concat(" - Set throttle to ");
+      pot_str.concat(throttle);
+      Serial.println(pot_str);
       myESC.speed(throttle); // sets the ESC speed according to the scaled value
       break;
     case stop_command:
@@ -76,9 +80,9 @@ void loop() {
       // Serial.println("Nothing to do");
       break;
     default:
-      Serial.print("Unrecognized command! cmd = '");
-      Serial.print(cmd);
-      Serial.println("' - doing nothing");
+      String resp = "Unrecognized command, doing nothing! cmd = '";
+      resp.concat(command);
+      Serial.println(resp);
       break;
     }
     delay(5);
