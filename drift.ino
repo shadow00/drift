@@ -4,6 +4,7 @@ unsigned int ESCpin = 7;
 unsigned int POTpin;
 unsigned int pot_value;
 unsigned int throttle = 0;
+boolean newData = false;
 
 #define SPEED_MIN (1060) // Set the Minimum Speed in microseconds
 #define SPEED_MAX (1860) // Set the Minimum Speed in microseconds
@@ -11,6 +12,8 @@ unsigned int throttle = 0;
 
 ESC myESC(ESCpin, SPEED_MIN, SPEED_MAX, ARM_VAL); // ESC_Name (PIN, Minimum Value, Maximum Value, Arm Value)
 
+const byte numChars = 64;
+char receivedChars[numChars];
 String command;
 const char arm_command = 'a';
 const char thr_command = 't';
@@ -20,10 +23,16 @@ const char calib_command = 'c';
 const char escpin_command = 'e';
 const char nothing_to_do = (char)0;
 char cmd = nothing_to_do;  // Default command on first start
+String thr_str;
+String pot_str;
 
 void setup() {
   Serial.begin(115200);  // opens serial port, sets data rate to 9600 bps
   Serial.setTimeout(10);  // Set timeout to 10ms to waste less time when reading serial input
+  String rdy = "<Arduino is ready,";
+  rdy.concat(millis());
+  rdy.concat('>');
+  Serial.print(rdy);
 }
 
 void loop() {  
@@ -32,27 +41,29 @@ void loop() {
     {
     case arm_command:
       myESC.arm(); // Send the Arm value
-      Serial.println("Sending ARM command");
+      send("Sending ARM command");
       cmd = nothing_to_do;
       break;
     case thr_command:
-      Serial.print("Set throttle to ");
-      Serial.println(throttle);
+      thr_str = "Set throttle to ";
+      thr_str.concat(throttle);
+      send(thr_str);
       myESC.speed(throttle); // sets the ESC speed according to the scaled value
       cmd = nothing_to_do;
       break;
     case pot_command:
       pot_value = analogRead(POTpin);
       throttle = map(pot_value, 0, 1023, SPEED_MIN, SPEED_MAX);
-      Serial.print("Reading pin ");
-      Serial.print(POTpin);
-      Serial.print(" - Set throttle to ");
-      Serial.println(throttle);
+      pot_str.concat("Pin ");
+      pot_str.concat(POTpin);
+      pot_str.concat(" - Set throttle to ");
+      pot_str.concat(throttle);
+      send(pot_str);
       myESC.speed(throttle); // sets the ESC speed according to the scaled value
       break;
     case stop_command:
       myESC.stop(); // Send the Stop value
-      Serial.println("Sending STOP command");
+      send("Sending STOP command");
       cmd = nothing_to_do;
       break;
     case calib_command:
@@ -76,15 +87,18 @@ void loop() {
       // Serial.println("Nothing to do");
       break;
     default:
-      Serial.print("Unrecognized command! cmd = '");
-      Serial.print(cmd);
-      Serial.println("' - doing nothing");
+      String resp = "Unrecognized command, doing nothing! cmd = '";
+      resp.concat(command);
+      send(resp);
       break;
     }
     delay(5);
   }
 
-  command = Serial.readStringUntil('\n'); // Note: the '\n' character is discarded from the serial buffer
+  recvWithStartEndMarkers();
+  command = String(receivedChars);
+  command.replace("<", "");
+  command.replace(">", "");
   command.trim();
   unsigned int cmdlen = command.length();
   cmd = command.charAt(0);  // Warning: this limits the commands to a single character (one byte)
@@ -129,4 +143,49 @@ void loop() {
   } else {
     // cmd = wrong_command;
   }
+}
+
+void recvWithStartEndMarkers() {
+  static boolean recvInProgress = false;
+  static byte ndx = 0;
+  char startMarker = '<';
+  char endMarker = '>';
+  char rc;
+
+  // while (Serial.available() > 0 && newData == false) {
+  while (Serial.available() > 0) {
+    rc = Serial.read();
+
+    if (recvInProgress == true) {
+      if (rc != endMarker) {
+        receivedChars[ndx] = rc;
+        ndx++;
+        if (ndx >= numChars) {
+          ndx = numChars - 1;
+        }
+      } else {
+        receivedChars[ndx] = '\0';  // terminate the string
+        recvInProgress = false;
+        ndx = 0;
+        // newData = true;
+        break;
+      }
+    }
+
+    else if (rc == startMarker) {
+      recvInProgress = true;
+    }
+  }
+}
+
+void send(String resp) {
+  // if (newData == true) {
+    Serial.print("<");
+    Serial.print(millis());
+    Serial.print('-');
+    Serial.print(resp);
+    Serial.print('>');
+    Serial.flush();
+    // newData = false;
+  // }
 }
