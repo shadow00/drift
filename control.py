@@ -22,19 +22,30 @@ delay = 0.05
 ser = serial.Serial('/dev/ttyACM0', 115200, timeout=1)
 
 t0 = time.time()
+time.sleep(0.6)
+ready = ser.readlines()
+print(f"{since(t0)} - {ready}")
 
 # Write each string in the list to the serial port
 for string in strings_to_send:
     print(f"{since(t0)} - Sending: {string.rstrip()}")
+    string = string + "\n" # Always append a newline, to prevent the serial read from going into timeout and get a faster response time
     ser.write(string.encode('ascii'))
     print(f"{since(t0)} - Sent: {string.rstrip()}")
+    # ser.flush()
     # WARNING: You MUST read the serial output from the Arduino if you want
     # it to actually execute what you told it to do!
     # Either read the lines from here (don't need to print them out though),
     # OR open the serial monitor in the Arduino IDE/vscode/tty emulator/whatever
     # BUT NEVER OPEN TWO READERS AT THE SAME TIME
-    # resp = ser.readline()
-    # print(resp.decode('ascii').rstrip())
+    # time.sleep(0.01)
+    # if ser.in_waiting > 0:
+    resp = ser.readline()
+    print(f"{since(t0)} -", resp.decode('ascii').rstrip())
+    # resp = ser.readlines()
+    # for l in resp:
+    #     print(f"{since(t0)} -", l.decode('ascii').rstrip())
+    # resp = ser.read_until('\n')
     time.sleep(delay)
 
 # Close the serial port
