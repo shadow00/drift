@@ -1,9 +1,9 @@
-#include <avr/interrupt.h>
-#include <avr/io.h>
 #include "ESC.h"
 
 unsigned int ESCpin = 9;
 unsigned int POTpin;  // DEFAULT POT PIN TO A5
+unsigned int LOADCELLpin = A0;
+unsigned int load_cell_value;
 unsigned int pot_value;
 unsigned int throttle = 0;
 unsigned long start = 0;
@@ -15,16 +15,9 @@ unsigned long result = 0;
 // unsigned long results[3] = {0};
 float RPM;
 #define MAX_TICKS (100) // Max ticks to count within a sampling interval
-#define SAMPLE_TIME (10000) // Maximum sampling interval (mus)
-
+#define SAMPLE_TIME (100000) // Maximum sampling interval (mus)
+/*
 void measure_and_print_rpm() {
-  // ACSR &= ~(0x08);  // Disable analog comparator interrupt
-  // ADCSRA |= (1<<ADEN);	// Turn on ADEN bit in ADCSRA (when ACME bit is 1) to use AIN1 -ve input
-  // ADCSRB &= ~(1<<ACME);	// Clear ACME bits in ADCSRB to use AIN1 -ve input
-  // pot_value = analogRead(POTpin);
-  // ADCSRA &= ~(1<<ADEN);  // Turn off ADEN bit in ADCSRA to use ADC0-ADC7 -ve input
-  // ADCSRB |= (1<<ACME);	// Turn on ACME bit in ADCSRB to use ADC0-ADC7 -ve input
-  // ACSR |= 0x08;  // Enable analog comparator interrupt
   // // throttle = map(pot_value, 0, 1023, SPEED_MIN, SPEED_MAX);
   // throttle = map(pot_value, 0, 1023, SPEED_MIN, 1300); // Limit throttle
   // throttle = 1150;
@@ -42,7 +35,8 @@ void measure_and_print_rpm() {
   result = counter;
   // RPM = (float)result / (stop - start) * 60000.0 / SAMPLE_TIME / 2;  // 2 ticks per revolution, 60k ms/minute
   // RPM = (float)result / (stop - start) * 30000.0 / SAMPLE_TIME;
-  RPM = (float)result / (stop - start) * 30000000 / SAMPLE_TIME;  // Working with micros
+  // RPM = (float)result / (float)(stop - start) / 12.0 * 60000000;  // Working with micros
+  RPM = (float)result / (float)(stop - start) * 60000;  // Working with micros
   Serial.print(millis());
   // Serial.print(" - Counted ");
   Serial.print(" - thr ");
@@ -58,10 +52,10 @@ void measure_and_print_rpm() {
   Serial.print(RPM);
   Serial.println(" RPM");
 }
-
-#define SPEED_MIN (1060) // Set the Minimum Speed in microseconds
-#define SPEED_MAX (1860) // Set the Minimum Speed in microseconds
-#define ARM_VAL (500) // Set the Arm Value in microseconds
+*/
+#define SPEED_MIN (1100) // Set the Minimum Speed in microseconds
+#define SPEED_MAX (2000) // Set the Minimum Speed in microseconds
+#define ARM_VAL (1000) // Set the Arm Value in microseconds
 
 ESC myESC(ESCpin, SPEED_MIN, SPEED_MAX, ARM_VAL); // ESC_Name (PIN, Minimum Value, Maximum Value, Arm Value)
 
@@ -77,51 +71,20 @@ char cmd = nothing_to_do;  // Default command on first start
 String thr_str;
 String pot_str;
 
-ISR(ANALOG_COMP_vect) {
-	counter++;
-}
 
 void setup() {
   Serial.begin(115200);  // opens serial port, sets data rate to 9600 bps
   Serial.setTimeout(10);  // Set timeout to 10ms to waste less time when reading serial input
   // Serial.flush();
-  String rdy = "Arduino is ready,";
+  String rdy = "Arduino is ready, ";
   rdy.concat(millis());
   // Serial.print(rdy);
   Serial.println(rdy);
+  analogReadResolution(12);
+}
 
-  DIDR1 = (1<<AIN0D) | (1<<AIN1D); // Disable Digital Inputs at AIN0 and AIN1
-	ADCSRA |= (1<<ADEN);	// Turn on ADEN bit in ADCSRA (when ACME bit is 1) to use AIN1 -ve input
-	// ADCSRA &= ~(1<<ADEN);  // Turn off ADEN bit in ADCSRA to use ADC0-ADC7 -ve input
-	// ADCSRA &= ~(bit (ADPS0) | bit (ADPS1) | bit (ADPS2)); // clear prescaler bits
-	// ADCSRA |= bit (ADPS0) | bit (ADPS1); // 8 bit scale, 6.5us per read
-	// ADCSRA |= bit (ADPS2); // 16 bit scale, 13us per read
-	ADCSRB &= ~(1<<ACME);	// Clear ACME bits in ADCSRB to use AIN1 -ve input
-	// ADCSRB |= (1<<ACME);	// Turn on ACME bit in ADCSRB to use ADC0-ADC7 -ve input
-	// ACSR = 0x10;  // Disable and clear (flag bit) analog comparator interrupt
-	// ADMUX = 0;		// Select analog pin ADCx
-	ACSR = 
-		(0 << ACD) |    // Analog Comparator: Enabled
-		(0 << ACBG) |   // Clear ACBG to use external input to AIN0 +ve input
-		(0 << ACO) |    // Analog Comparator Output: READ ONLY
-		(0 << ACI) |    // Analog Comparator Interrupt Flag: Clear Pending Interrupt by setting the bit
-		(1 << ACIE) |   // Analog Comparator Interrupt: Enabled 
-		(0 << ACIC) |   // Analog Comparator Input Capture: Disabled
-		// When changing the ACIS1/ACIS0 bits, the analog comparator interrupt must be disabled by clearing its interrupt enable bit
-		// in the ACSR register. Otherwise an interrupt can occur when the bits are changed.
-		(0 << ACIS1) | (0 << ACIS0);   // Analog Comparator Interrupt Mode: Comparator Interrupt on Output Toggle
-		// (1 << ACIS1) | (0 << ACIS0);   // Analog Comparator Interrupt Mode: Comparator Interrupt on Output Falling Edge
-		// (1 << ACIS1) | (1 << ACIS0);   // Analog Comparator Interrupt Mode: Comparator Interrupt on Output Raising Edge
-	Serial.print("DIDR1: ");
-	Serial.println(DIDR1, BIN);
-	Serial.print("ADCSRA: ");
-	Serial.println(ADCSRA, BIN);
-	Serial.print("ADCSRB: ");
-	Serial.println(ADCSRB, BIN);
-	Serial.print("ADMUX: ");
-	Serial.println(ADMUX, BIN);
-	Serial.print("ACSR: ");
-	Serial.println(ACSR, BIN);
+void read_load_cell() {
+  load_cell_value = analogRead(LOADCELLpin);
 }
 
 void loop() {  
@@ -135,33 +98,33 @@ void loop() {
       cmd = nothing_to_do;
       break;
     case thr_command:
-      // thr_str = "Set throttle to ";
-      // thr_str.concat(throttle);
-      // Serial.println(thr_str);
-      // Serial.flush();
       myESC.speed(throttle); // sets the ESC speed according to the scaled value
-      measure_and_print_rpm();
+      read_load_cell();
+      thr_str = "Set throttle to ";
+      thr_str.concat(throttle);
+      thr_str.concat(" - Load cell ");
+      thr_str.concat(load_cell_value);
+      Serial.println(thr_str);
+      // Serial.flush();
+      // measure_and_print_rpm();
       // cmd = nothing_to_do;
       break;
     case pot_command:
-      // ACSR &= ~(0x08);  // Disable analog comparator interrupt
-      // ADCSRA |= (1<<ADEN);	// Turn on ADEN bit in ADCSRA (when ACME bit is 1) to use AIN1 -ve input
-      // ADCSRB &= ~(1<<ACME);	// Clear ACME bits in ADCSRB to use AIN1 -ve input
       pot_value = analogRead(POTpin);
-      // ADCSRA &= ~(1<<ADEN);  // Turn off ADEN bit in ADCSRA to use ADC0-ADC7 -ve input
-      // ADCSRB |= (1<<ACME);	// Turn on ACME bit in ADCSRB to use ADC0-ADC7 -ve input
-      // ACSR |= 0x08;  // Enable analog comparator interrupt
-      throttle = map(pot_value, 0, 1023, SPEED_MIN, SPEED_MAX);
-      // throttle = map(pot_value, 0, 1023, SPEED_MIN, 1300); // Limit throttle
-      // throttle = 1150;
-      // pot_str = "Pin ";
-      // pot_str.concat(POTpin);
-      // pot_str.concat(" - Set throttle to ");
-      // pot_str.concat(throttle);
-      // Serial.println(pot_str);
+      // throttle = map(pot_value, 0, 4096, SPEED_MIN, 1300); // Limit throttle
+      throttle = map(pot_value, 0, 4096, SPEED_MIN, SPEED_MAX);
       myESC.speed(throttle); // sets the ESC speed according to the scaled value
+      // throttle = 1150;
+      read_load_cell();
+      pot_str = "Pin ";
+      pot_str.concat(POTpin);
+      pot_str.concat(" - Set throttle to ");
+      pot_str.concat(throttle);
+      pot_str.concat(" - Load cell ");
+      pot_str.concat(load_cell_value);
+      Serial.println(pot_str);
       // Serial.flush();
-      measure_and_print_rpm();
+      // measure_and_print_rpm();
       break;
     case stop_command:
       myESC.stop(); // Send the Stop value
@@ -216,24 +179,25 @@ void loop() {
     }
     // cmd = thr_command;
   } else if (command.startsWith(String(pot_command))) {
+    POTpin = A5; // DEFAULT POT PIN TO A5
     // "pa0"
-    if (cmdlen > 1) {
-      String pot_str = command.substring(1);  // Assume there is no space after the 'p'
-      pot_str.toLowerCase();
-      // // if (pot_str.startsWith("a") && isDigit(pot_str.substring(1))) {}
-      // if (pot_str.startsWith("a") && pot_str.substring(1).toInt()) {
-      if (pot_str.startsWith("a")) {
-        // Analog pins "a0" - "a7" for stuff like Arduino Uno, or "a11" for the Arduino Giga R1
-        // https://github.com/arduino/ArduinoCore-avr/blob/master/variants/standard/pins_arduino.h#L28-L72
-        // https://github.com/arduino/ArduinoCore-mbed/blob/main/variants/GIGA/pins_arduino.h#L21-L56
-        int analog_pin_num = pot_str.substring(1).toInt();
-        POTpin = NUM_DIGITAL_PINS - NUM_ANALOG_INPUTS + analog_pin_num;
-      } else if (isDigit(pot_str[0])) {
-        POTpin = pot_str.substring(0).toInt();
-      }
-    } else {
-      POTpin = A5; // DEFAULT POT PIN TO A5
-    }
+    // if (cmdlen > 1) {
+    //   String pot_str = command.substring(1);  // Assume there is no space after the 'p'
+    //   pot_str.toLowerCase();
+    //   // // if (pot_str.startsWith("a") && isDigit(pot_str.substring(1))) {}
+    //   // if (pot_str.startsWith("a") && pot_str.substring(1).toInt()) {
+    //   if (pot_str.startsWith("a")) {
+    //     // Analog pins "a0" - "a7" for stuff like Arduino Uno, or "a11" for the Arduino Giga R1
+    //     // https://github.com/arduino/ArduinoCore-avr/blob/master/variants/standard/pins_arduino.h#L28-L72
+    //     // https://github.com/arduino/ArduinoCore-mbed/blob/main/variants/GIGA/pins_arduino.h#L21-L56
+    //     int analog_pin_num = pot_str.substring(1).toInt();
+    //     POTpin = NUM_DIGITAL_PINS - NUM_ANALOG_INPUTS + analog_pin_num;
+    //   } else if (isDigit(pot_str[0])) {
+    //     POTpin = pot_str.substring(0).toInt();
+    //   }
+    // } else {
+    //   POTpin = A5; // DEFAULT POT PIN TO A5
+    // }
     // cmd = pot_command;
   } else if (command.startsWith(String(stop_command))) {
     // cmd = stop_command;
