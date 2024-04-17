@@ -38,76 +38,8 @@ bool print_thr = true;
 String thr_str;
 String pot_str;
 
-// ISR(ANALOG_COMP_vect) {
-//   if (counter < 2) {
-//     times[counter] = micros();
-// 	  counter++;
-//   }
-// }
 
 void measure_and_print_rpm() {
-  // ACSR &= ~(0x08);  // Disable analog comparator interrupt
-  // ADCSRA |= (1<<ADEN);	// Turn on ADEN bit in ADCSRA (when ACME bit is 1) to use AIN1 -ve input
-  // ADCSRB &= ~(1<<ACME);	// Clear ACME bits in ADCSRB to use AIN1 -ve input
-  // pot_value = analogRead(POTpin);
-  // ADCSRA &= ~(1<<ADEN);  // Turn off ADEN bit in ADCSRA to use ADC0-ADC7 -ve input
-  // ADCSRB |= (1<<ACME);	// Turn on ACME bit in ADCSRB to use ADC0-ADC7 -ve input
-  // ACSR |= 0x08;  // Enable analog comparator interrupt
-  // // throttle = map(pot_value, 0, 1023, SPEED_MIN, SPEED_MAX);
-  // throttle = map(pot_value, 0, 1023, SPEED_MIN, 1300); // Limit throttle
-  // throttle = 1150;
-  // myESC.speed(throttle); // sets the ESC speed according to the scaled value
-  // result = 0;
-  // start = millis();
-  // stop = millis();
-  // start = micros();
-  // stop = micros();
-  // counter = 0;
-  // while ((counter < MAX_TICKS) && ((stop - start) < SAMPLE_TIME)) { // Count up to 20 ticks or 1000mus
-    // stop = millis();
-    // stop = micros();
-  // ACSR |= 0x08;  // Enable analog comparator interrupt
-  // ACSR |= (1 << ACI) | (1 << ACIE); // Enable analog comparator interrupt and clear interrupt flag
-  // while ((counter < 2)) { // Count 2 ticks (toggles)
-  // while ((counter < 2) && ((stop - start) < SAMPLE_TIME)) { // Count 2 ticks (toggles) or wait until SAMPLE_TIME
-  // }
-  // // Set throttle to 0 (minimum?)
-  // myESC.speed(SPEED_MIN);
-  // Count 2 ticks
-  // counter = ACSR ^ (1<<ACO);/*
-  // start = counter;
-  // // Serial.print("ACSR ");
-  // // Serial.print(ACSR, BIN);
-  // // Serial.print(" - c ");
-  // // Serial.println(counter);
-  // // Serial.println("Reading ticks");
-  // // while ((ACSR & (1<<ACO))) {
-  // while (start == counter) {
-  // // while ((start == counter) && (cmd == 't' || cmd == 'p')) {
-  // // while (ACO) {
-  //   // Do nothing
-  //   counter = ACSR ^ (1<<ACO);
-  //   // Serial.print(ACSR, BIN);
-  //   // Serial.print(" - ");
-  //   // Serial.println((ACSR ^ (1<<ACO)), BIN);
-  //   // Serial.println(ACO, BIN);
-  // }*/
-  // Serial.print(ACSR, BIN);
-  // Serial.println("Read 1 tick");
-  // times[0] = micros();
-  /*counter = ACSR ^ (1<<ACO);
-  start = counter;
-  // counter = ACSR ^ (1<<ACO);
-  // while (~(ACSR & (1<<ACO))) {
-  while (start == counter) {
-  // while ((start == counter) && (cmd == 't' || cmd == 'p')) {
-    // Do nothing
-    counter = ACSR ^ (1<<ACO);
-    // Serial.print(ACSR, BIN);
-    // Serial.print(" - ");
-    // Serial.println((ACSR & (1<<ACO)), BIN);
-  }
-  // Serial.println("Read 2 ticks");*/
   times[0] = micros();
   results[0] = analogRead(A0);
   times[1] = micros();
@@ -135,15 +67,6 @@ void measure_and_print_rpm() {
   Serial.print(',');
   Serial.print(results[3]);
   Serial.print('\n');
-  // // Set throttle back to original value
-  // myESC.speed(throttle);
-  // ACSR = 0x10;  // Disable and clear (flag bit) analog comparator interrupt
-  // ACSR &= ~((1 << ACI) | (1 << ACIE));  // Disable and clear (flag bit) analog comparator interrupt
-  // ACSR &= ~(0x08);  // Disable analog comparator interrupt
-  // result = counter;
-  // RPM = (float)result / (stop - start) * 60000.0 / SAMPLE_TIME / 2;  // 2 ticks per revolution, 60k ms/minute
-  // RPM = (float)result / (stop - start) * 30000.0 / SAMPLE_TIME;
-  // RPM = (float)result / (stop - start) * 30000000 / SAMPLE_TIME;  // Working with micros
   // RPM = (float)(1e6 / (4.0 * (times[1] - times[0])));  // Working with micros
   // Serial.print(millis());
   // // Serial.print(" - Counted ");
@@ -239,13 +162,7 @@ void loop() {
       //   Serial.println(thr_str);
       //   print_thr = false;
       // }
-      // ACSR &= ~(0x08);  // Disable analog comparator interrupt
-      // ADCSRA |= (1<<ADEN);	// Turn on ADEN bit in ADCSRA (when ACME bit is 1) to use AIN1 -ve input
-      // ADCSRB &= ~(1<<ACME);	// Clear ACME bits in ADCSRB to use AIN1 -ve input
       pot_value = analogRead(POTpin);
-      // ADCSRA &= ~(1<<ADEN);  // Turn off ADEN bit in ADCSRA to use ADC0-ADC7 -ve input
-      // ADCSRB |= (1<<ACME);	// Turn on ACME bit in ADCSRB to use ADC0-ADC7 -ve input
-      // ACSR |= 0x08;  // Enable analog comparator interrupt
       throttle = map(pot_value, 0, 1023, SPEED_MIN, SPEED_MAX);
       // throttle = map(pot_value, 0, 1023, SPEED_MIN, 1300); // Limit throttle
       // throttle = 1150;
