@@ -1,58 +1,23 @@
+#undef HID_ENABLED
+#include <DueAdcFast.h>
 #include "ESC.h"
+
+#define mySerial SerialUSB
+
+DueAdcFast DueAdcF(1024);  // 1024 measures is dimension of internal buffer. (min is 1024)
 
 unsigned int ESCpin = 9;
 unsigned int POTpin;  // DEFAULT POT PIN TO A5
-unsigned int LOADCELLpin = A0;
-unsigned int load_cell_value;
 unsigned int pot_value;
 unsigned int throttle = 0;
 unsigned long start = 0;
 unsigned long stop = 0;
-byte phase_step = 0;
-volatile unsigned long counter = 0;
-// volatile unsigned long counters[3] = {0};
-unsigned long result = 0;
-// unsigned long results[3] = {0};
-float RPM;
-#define MAX_TICKS (100) // Max ticks to count within a sampling interval
-#define SAMPLE_TIME (100000) // Maximum sampling interval (mus)
-/*
-void measure_and_print_rpm() {
-  // // throttle = map(pot_value, 0, 1023, SPEED_MIN, SPEED_MAX);
-  // throttle = map(pot_value, 0, 1023, SPEED_MIN, 1300); // Limit throttle
-  // throttle = 1150;
-  // myESC.speed(throttle); // sets the ESC speed according to the scaled value
-  result = 0;
-  // start = millis();
-  // stop = millis();
-  start = micros();
-  stop = micros();
-  counter = 0;
-  while ((counter < MAX_TICKS) && ((stop - start) < SAMPLE_TIME)) { // Count up to 20 ticks or 1000mus
-    // stop = millis();
-    stop = micros();
-  }
-  result = counter;
-  // RPM = (float)result / (stop - start) * 60000.0 / SAMPLE_TIME / 2;  // 2 ticks per revolution, 60k ms/minute
-  // RPM = (float)result / (stop - start) * 30000.0 / SAMPLE_TIME;
-  // RPM = (float)result / (float)(stop - start) / 12.0 * 60000000;  // Working with micros
-  RPM = (float)result / (float)(stop - start) * 60000;  // Working with micros
-  Serial.print(millis());
-  // Serial.print(" - Counted ");
-  Serial.print(" - thr ");
-  Serial.print(throttle);
-  Serial.print(" - ");
-  Serial.print(result);
-  Serial.print(" ticks in ");
-  Serial.print(stop - start);
-  // Serial.println(" ms");
-  // Serial.println(" mus");
-  // Serial.print(" ms - ");
-  Serial.print(" mus - ");
-  Serial.print(RPM);
-  Serial.println(" RPM");
-}
-*/
+volatile unsigned long results[5] = {0};
+volatile unsigned long times[5] = {0};
+
+// #define SPEED_MIN (1060) // Set the Minimum Speed in microseconds
+// #define SPEED_MAX (1860) // Set the Minimum Speed in microseconds
+// #define ARM_VAL (500) // Set the Arm Value in microseconds
 #define SPEED_MIN (1100) // Set the Minimum Speed in microseconds
 #define SPEED_MAX (2000) // Set the Minimum Speed in microseconds
 #define ARM_VAL (1000) // Set the Arm Value in microseconds
@@ -68,103 +33,154 @@ const char calib_command = 'c';
 const char escpin_command = 'e';
 const char nothing_to_do = (char)0;
 char cmd = nothing_to_do;  // Default command on first start
+bool print_thr = true;
 String thr_str;
 String pot_str;
 
 
-void setup() {
-  Serial.begin(115200);  // opens serial port, sets data rate to 9600 bps
-  Serial.setTimeout(10);  // Set timeout to 10ms to waste less time when reading serial input
-  // Serial.flush();
-  String rdy = "Arduino is ready, ";
-  rdy.concat(millis());
-  // Serial.print(rdy);
-  Serial.println(rdy);
-  analogReadResolution(12);
+// these 3 lines of code are essential for the functioning of the library
+// you don't call ADC_Handler.
+// is used automatically by the PDC every time it has filled the buffer
+// and rewrite buffer.
+void ADC_Handler() {
+  DueAdcF.adcHandler();
 }
 
-void read_load_cell() {
-  load_cell_value = analogRead(LOADCELLpin);
+void measure_and_print_rpm() {
+  times[0] = micros();
+  results[0] = DueAdcF.ReadAnalogPin(A0); // Load cell
+  times[1] = micros();
+  results[1] = DueAdcF.ReadAnalogPin(A1);
+  times[2] = micros();
+  results[2] = DueAdcF.ReadAnalogPin(A2);
+  times[3] = micros();
+  results[3] = DueAdcF.ReadAnalogPin(A3);
+  times[4] = micros();
+  results[4] = DueAdcF.ReadAnalogPin(A4);
+  mySerial.print(throttle);
+  mySerial.print(',');
+  mySerial.print(times[1]);
+  mySerial.print(',');
+  mySerial.print(results[1]);
+  mySerial.print(',');
+  mySerial.print(times[2]);
+  mySerial.print(',');
+  mySerial.print(results[2]);
+  mySerial.print(',');
+  mySerial.print(times[3]);
+  mySerial.print(',');
+  mySerial.print(results[3]);
+  mySerial.print(',');
+  mySerial.print(times[4]);
+  mySerial.print(',');
+  mySerial.print(results[4]);
+  mySerial.print(',');
+  mySerial.print(times[0]); // Load cell
+  mySerial.print(',');
+  mySerial.print(results[0]); // Load cell
+  mySerial.print('\n');
+}
+
+void setup() {
+  mySerial.begin(115200);  // opens serial port, sets data rate to 115200 bps
+  while (!mySerial);  // Wait for serial to initialize
+  mySerial.setTimeout(10);  // Set timeout to 10ms to waste less time when reading serial input
+  String rdy = "Arduino is ready, ";
+  rdy.concat(millis());
+  rdy.concat('\n');
+  mySerial.print(rdy);
+  // https://github.com/AntonioPrevitali/DueAdcFast/blob/main/examples/Sample3/Sample3.pde
+  analogReadResolution(12);
+  DueAdcF.EnablePin(A0);  // Load cell
+  DueAdcF.EnablePin(A1);  // Neutral point
+  DueAdcF.EnablePin(A2);  // Phase 1
+  DueAdcF.EnablePin(A3);  // Phase 2
+  DueAdcF.EnablePin(A4);  // Phase 3
+  DueAdcF.EnablePin(A5);  // Throttle Pot
+  DueAdcF.Start1Mhz();       // max speed 1Mhz (sampling rate)
+  // DueAdcF.Start(255);        // with prescaler value form 3 to 255.
+                             // 255 is approx. 7812 Hz (sampling rate)
 }
 
 void loop() {  
-  while (Serial.available() == 0) {
+  while (mySerial.available() == 0) {
     switch (cmd)
     {
     case arm_command:
       myESC.arm(); // Send the Arm value
-      Serial.println("Sending ARM command");
-      // Serial.flush();
+      mySerial.println("Sending ARM command");
       cmd = nothing_to_do;
       break;
     case thr_command:
+      if (print_thr) {
+        thr_str = "Set throttle to ";
+        thr_str.concat(throttle);
+        thr_str.concat('\n');
+        mySerial.print(thr_str);
+        print_thr = false;
+      }
       myESC.speed(throttle); // sets the ESC speed according to the scaled value
-      read_load_cell();
-      thr_str = "Set throttle to ";
-      thr_str.concat(throttle);
-      thr_str.concat(" - Load cell ");
-      thr_str.concat(load_cell_value);
-      Serial.println(thr_str);
-      // Serial.flush();
-      // measure_and_print_rpm();
+      measure_and_print_rpm();
       // cmd = nothing_to_do;
       break;
     case pot_command:
-      pot_value = analogRead(POTpin);
-      // throttle = map(pot_value, 0, 4096, SPEED_MIN, 1300); // Limit throttle
+      // if (print_thr) {
+      //   thr_str = "Set throttle to ";
+      //   thr_str.concat(throttle);
+      //   thr_str.concat('\n');
+      //   mySerial.print(thr_str);
+      //   print_thr = false;
+      // }
+      pot_value = DueAdcF.ReadAnalogPin(POTpin);
       throttle = map(pot_value, 0, 4096, SPEED_MIN, SPEED_MAX);
-      myESC.speed(throttle); // sets the ESC speed according to the scaled value
+      // throttle = map(pot_value, 0, 4096, SPEED_MIN, 1300); // Limit throttle
       // throttle = 1150;
-      read_load_cell();
-      pot_str = "Pin ";
-      pot_str.concat(POTpin);
-      pot_str.concat(" - Set throttle to ");
-      pot_str.concat(throttle);
-      pot_str.concat(" - Load cell ");
-      pot_str.concat(load_cell_value);
-      Serial.println(pot_str);
-      // Serial.flush();
-      // measure_and_print_rpm();
+      // pot_str = "Pin ";
+      // pot_str.concat(POTpin);
+      // pot_str.concat(" - Set throttle to ");
+      // pot_str.concat(throttle);
+      // mySerial.println(pot_str);
+      myESC.speed(throttle); // sets the ESC speed according to the scaled value
+      measure_and_print_rpm();
       break;
     case stop_command:
       myESC.stop(); // Send the Stop value
-      Serial.println("Sending STOP command");
-      // Serial.flush();
+      mySerial.println("Sending STOP command");
       cmd = nothing_to_do;
       break;
     case calib_command:
       myESC.calib(); // Calibrate
-      Serial.println("Throttle calibration");
-      // Serial.flush();
+      mySerial.println("Throttle calibration");
       // cmd = arm_command; // Arm after calibration?
       cmd = nothing_to_do;
       break;
     case escpin_command:
       if (ESCpin > 1 && ESCpin <= NUM_DIGITAL_PINS) {
-        Serial.print("Setting ESC to pin ");
-        Serial.println(ESCpin);
-        // Serial.flush();
+        mySerial.print("Setting ESC to pin ");
+        mySerial.println(ESCpin);
         cmd = nothing_to_do;
       } else {
-        Serial.print("WARNING: Invalid ESC pin ");
-        Serial.println(ESCpin);
-        // Serial.flush();
+        mySerial.print("WARNING: Invalid ESC pin ");
+        mySerial.println(ESCpin);
         cmd = nothing_to_do;
       }
       break;
     case nothing_to_do:
-      // Serial.println("Nothing to do");
+      if (print_thr) {
+        mySerial.println("Nothing to do");
+        print_thr = false;
+      }
       break;
     default:
       String resp = "Unrecognized command, doing nothing! cmd = '";
       resp.concat(command);
-      Serial.println(resp);
+      mySerial.println(resp);
       break;
     }
     // delay(5);
   }
 
-  command = Serial.readStringUntil('\n'); // Note: the '\n' character is discarded from the serial buffer
+  command = mySerial.readStringUntil('\n'); // Note: the '\n' character is discarded from the serial buffer
   command.trim();
   unsigned int cmdlen = command.length();
   cmd = command.charAt(0);  // Warning: this limits the commands to a single character (one byte)
@@ -174,11 +190,15 @@ void loop() {
   if (command.startsWith(String(arm_command))) {
     // cmd = arm_command;
   } else if (command.startsWith(String(thr_command))) {
+    print_thr = true;
     if (cmdlen > 1 && cmdlen < 6) { // match "t0" - "t1024"
       throttle = command.substring(1).toInt();
+    } else {
+      cmd = nothing_to_do;
     }
     // cmd = thr_command;
   } else if (command.startsWith(String(pot_command))) {
+    // print_thr = true;
     POTpin = A5; // DEFAULT POT PIN TO A5
     // "pa0"
     // if (cmdlen > 1) {
