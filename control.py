@@ -8,23 +8,26 @@ def since(t0):
     return ts
 
 # List of strings to send
-manual_throttle = [f"t{num}\n" for num in range(1060, 1200, 1)]
-strings_to_send = ["a\n", *manual_throttle, *manual_throttle[::-1], "s\n"]
-delay = 0.05
-# manual_throttle = [f"t{num}\n" for num in [1100, 1200, 1100, 1200, 1100, 1200, 1100, 1200, 1100]]
+# manual_throttle = [f"t{num}" for num in range(1060, 1200, 1)]
+# strings_to_send = ["a", *manual_throttle, *manual_throttle[::-1], "s"]
+# delay = 0.05
+manual_throttle = [f"t{num}" for num in [1100, 1200, 1100, 1200, 1100, 1200, 1100, 1200, 1100]]
 # strings_to_send = ["a\n", "e7\n", "a\n", *manual_throttle, "s\n"]
-# strings_to_send = ["a\n", *manual_throttle, "s\n"]
-# delay = 0.1
+strings_to_send = ["a", *manual_throttle, "s"]
+delay = 0.001
 
 # Open the serial port
 # Replace '/dev/ttyACM0' with the actual port name if different
 # Adjust the baud rate (e.g., 9600, 115200) as necessary
-ser = serial.Serial('/dev/ttyACM0', 115200, timeout=1)
+# ser = serial.Serial('/dev/ttyACM0', 115200, timeout=0.1)
+ser = serial.Serial('/dev/ttyACM0')
+
+# tail -f /dev/ttyACM0 -s 0.001 >> test_format5.txt
 
 t0 = time.time()
-time.sleep(0.6)
-ready = ser.readlines()
-print(f"{since(t0)} - {ready}")
+# time.sleep(0.6)
+# ready = ser.readline()
+# print(f"{since(t0)} - {ready}")
 
 # Write each string in the list to the serial port
 for string in strings_to_send:
@@ -40,8 +43,8 @@ for string in strings_to_send:
     # BUT NEVER OPEN TWO READERS AT THE SAME TIME
     # time.sleep(0.01)
     # if ser.in_waiting > 0:
-    resp = ser.readline()
-    print(f"{since(t0)} -", resp.decode('ascii').rstrip())
+    # resp = ser.readline()
+    # print(f"{since(t0)} -", resp.decode('ascii').rstrip())
     # resp = ser.readlines()
     # for l in resp:
     #     print(f"{since(t0)} -", l.decode('ascii').rstrip())
