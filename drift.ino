@@ -9,6 +9,8 @@ DueAdcFast DueAdcF(1024);  // 1024 measures is dimension of internal buffer. (mi
 unsigned int ESCpin = 9;
 unsigned int POTpin;  // DEFAULT POT PIN TO A5
 unsigned int pot_value;
+unsigned int load_value;
+unsigned int now;
 unsigned int throttle = 0;
 unsigned long start = 0;
 unsigned long stop = 0;
@@ -28,6 +30,7 @@ String command;
 const char arm_command = 'a';
 const char thr_command = 't';
 const char pot_command = 'p';
+const char load_command = 'l';
 const char stop_command = 's';
 const char calib_command = 'c';
 const char escpin_command = 'e';
@@ -84,10 +87,10 @@ void measure_and_print_rpm() {
 void setup() {
   mySerial.begin(115200);  // opens serial port, sets data rate to 115200 bps
   while (!mySerial);  // Wait for serial to initialize
-  mySerial.setTimeout(10);  // Set timeout to 10ms to waste less time when reading serial input
-  String rdy = "Arduino is ready, ";
+  // mySerial.setTimeout(10);  // Set timeout to 10ms to waste less time when reading serial input
+  String rdy = "Arduino is ready! ";
   rdy.concat(millis());
-  rdy.concat('\n');
+  rdy.concat("ms\n");
   mySerial.print(rdy);
   // https://github.com/AntonioPrevitali/DueAdcFast/blob/main/examples/Sample3/Sample3.pde
   analogReadResolution(12);
@@ -142,6 +145,18 @@ void loop() {
       // mySerial.println(pot_str);
       myESC.speed(throttle); // sets the ESC speed according to the scaled value
       measure_and_print_rpm();
+      break;
+    case load_command:
+      if (print_thr) {
+        mySerial.print("Reading LOAD CELL\n");
+        print_thr = false;
+      }
+      now = micros();
+      load_value = DueAdcF.ReadAnalogPin(A0);  // Load Cell
+      mySerial.print(now);
+      mySerial.print(',');
+      mySerial.print(load_value);
+      mySerial.print('\n');
       break;
     case stop_command:
       myESC.stop(); // Send the Stop value
@@ -219,6 +234,9 @@ void loop() {
     //   POTpin = A5; // DEFAULT POT PIN TO A5
     // }
     // cmd = pot_command;
+  } else if (command.startsWith(String(load_command))) {
+    print_thr = false;
+    // cmd = load_command;
   } else if (command.startsWith(String(stop_command))) {
     // cmd = stop_command;
   } else if (command.startsWith(String(calib_command))) {
