@@ -10,12 +10,13 @@ import scipy.stats as stats
 def plot_data_format5(log_file):
     # Regular expression pattern to match lines with timestamp1, v1, v2, v3, v4, and timestamp2
     # 1100,6030475,496,6030480,581,6030484,563,6030490,591,6030472,4095
+    # 1060,126554019,0,126554024,0,126554029,0,126554034,0,126554013,2270
     # (?=\d{1,4},\d{7,8},\d{1,3},\d{7,8},\d{1,3},\d{7,8},\d{1,3},\d{7,8},\d{1,3}\n)
     # ^(?=\d{1,4},\d{7,8},\d{1,3},\d{7,8},\d{1,3},\d{7,8},\d{1,3},\d{7,8},\d{1,3}\n)
     # 7\d\d\d\d\d\d\d
-    line_pattern = r'(?=\d{1,4}\,\d{7,8}\,\d{1,4}\,\d{7,8}\,\d{1,4}\,\d{7,8}\,\d{1,4}\,\d{7,8}\,\d{1,4}\,\d{7,8}\,\d{1,4}\n)'
+    line_pattern = r'(?=\d{1,4}\,\d{7,9}\,\d{1,4}\,\d{7,9}\,\d{1,4}\,\d{7,9}\,\d{1,4}\,\d{7,9}\,\d{1,4}\,\d{7,9}\,\d{1,4}\n)'
     # Regular expression pattern to extract timestamp1, v1, v2, and timestamp2
-    extract_pattern = r'(\d{1,4})\,(\d{7,8})\,(\d{1,4})\,(\d{7,8})\,(\d{1,4})\,(\d{7,8})\,(\d{1,4})\,(\d{7,8})\,(\d{1,4})\,\d{7,8}\,\d{1,4}\n'
+    extract_pattern = r'(\d{1,4})\,(\d{7,9})\,(\d{1,4})\,(\d{7,9})\,(\d{1,4})\,(\d{7,9})\,(\d{1,4})\,(\d{7,9})\,(\d{1,4})\,\d{7,9}\,\d{1,4}\n'
 
     # Lists to store extracted values
     timestamp1_values = []
