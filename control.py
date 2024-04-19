@@ -14,7 +14,8 @@ def since(t0):
 manual_throttle = [f"t{num}" for num in [1100, 1200, 1100, 1200, 1100, 1200, 1100, 1200, 1100]]
 # strings_to_send = ["a\n", "e7\n", "a\n", *manual_throttle, "s\n"]
 strings_to_send = ["a", *manual_throttle, "s"]
-delay = 0.001
+# delay = 0.001
+delay = 1
 
 # Open the serial port
 # Replace '/dev/ttyACM0' with the actual port name if different
@@ -22,7 +23,9 @@ delay = 0.001
 # ser = serial.Serial('/dev/ttyACM0', 115200, timeout=0.1)
 ser = serial.Serial('/dev/ttyACM0')
 
-# tail -f /dev/ttyACM0 -s 0.001 >> test_format5.txt
+# stty -F /dev/ttyACM0 raw -iexten -echo -echoe -echok -echoctl -echoke -onlcr
+# stty -F /dev/ttyACM0 cs8 9600 ignbrk -brkint -imaxbel -opost -onlcr -isig -icanon -iexten -echo -echoe -echok -echoctl -echoke noflsh -ixon -crtscts
+# tail -f /dev/ttyACM0 -s 0.0001 >> test_format5.txt
 
 t0 = time.time()
 # time.sleep(0.6)
