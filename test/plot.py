@@ -9,6 +9,7 @@ from format2 import plot_data_format2
 from format3 import plot_data_format3
 from format4 import plot_data_format4
 from format5 import plot_data_format5
+from formatlc import plot_data_load_cell
 
 
 # List all *.txt files in the current directory
@@ -36,6 +37,8 @@ if 0 <= selected_file_index < len(txt_files):
         plot_data_format4(selected_file)
     elif 'format5' in selected_file:
         plot_data_format5(selected_file)
+    elif 'load_cell' in selected_file:
+        plot_data_load_cell(selected_file)
     else:
         print("Unknown file format.")
 else:
