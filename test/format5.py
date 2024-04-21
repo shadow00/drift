@@ -14,19 +14,21 @@ def plot_data_format5(log_file):
     # (?=\d{1,4},\d{7,8},\d{1,3},\d{7,8},\d{1,3},\d{7,8},\d{1,3},\d{7,8},\d{1,3}\n)
     # ^(?=\d{1,4},\d{7,8},\d{1,3},\d{7,8},\d{1,3},\d{7,8},\d{1,3},\d{7,8},\d{1,3}\n)
     # 7\d\d\d\d\d\d\d
-    line_pattern = r'(?=\d{1,4}\,\d{7,9}\,\d{1,4}\,\d{7,9}\,\d{1,4}\,\d{7,9}\,\d{1,4}\,\d{7,9}\,\d{1,4}\,\d{7,9}\,\d{1,4}\n)'
+    line_pattern = r'(?=\d{1,4}\,\d{7,12}\,\d{1,4}\,\d{7,12}\,\d{1,4}\,\d{7,12}\,\d{1,4}\,\d{7,12}\,\d{1,4}\,\d{7,12}\,\d{1,4}\n)'
     # Regular expression pattern to extract timestamp1, v1, v2, and timestamp2
-    extract_pattern = r'(\d{1,4})\,(\d{7,9})\,(\d{1,4})\,(\d{7,9})\,(\d{1,4})\,(\d{7,9})\,(\d{1,4})\,(\d{7,9})\,(\d{1,4})\,\d{7,9}\,\d{1,4}\n'
+    extract_pattern = r'(\d{1,4})\,(\d{7,12})\,(\d{1,4})\,(\d{7,12})\,(\d{1,4})\,(\d{7,12})\,(\d{1,4})\,(\d{7,12})\,(\d{1,4})\,(\d{7,12})\,(\d{1,4})'
 
     # Lists to store extracted values
     timestamp1_values = []
     timestamp2_values = []
     timestamp3_values = []
     timestamp4_values = []
+    timestampc_values = []
     variable1 = []
     variable2 = []
     variable3 = []
     variable4 = []
+    load_cell = []
     throttle = []
 
     # Read the log file line by line
@@ -46,7 +48,20 @@ def plot_data_format5(log_file):
                     variable3.append(int(match.group(7)))
                     timestamp4_values.append(int(match.group(8)))
                     variable4.append(int(match.group(9)))
+                    timestampc_values.append(int(match.group(10)))
+                    load_cell.append(int(match.group(11)))
 
+    timestamp1_values = np.array(timestamp1_values)
+    timestamp2_values = np.array(timestamp2_values)
+    timestamp3_values = np.array(timestamp3_values)
+    timestamp4_values = np.array(timestamp4_values)
+    timestampc_values = np.array(timestampc_values)
+    variable1 = np.array(variable1)
+    variable2 = np.array(variable2)
+    variable3 = np.array(variable3)
+    variable4 = np.array(variable4)
+    load_cell = np.array(load_cell)
+    throttle = np.array(throttle)
     # Plot the data as time series with a second subplot for format 2
     fig, (ax1, ax2, ax3) = plt.subplots(3, 1)
     ax1 = plt.subplot(3, 1, 1)
@@ -97,4 +112,72 @@ def plot_data_format5(log_file):
     ax2.xaxis.set_major_formatter(ticks_x)
     ax3.xaxis.set_major_formatter(ticks_x)
     
+    plt.show(block=False)
+
+    # Load cell vs time
+    # Filter load cell data with a moving average, then downsample it
+    # Smoothing the data with a moving average filter
+    def moving_average(data, window_size):
+        return np.convolve(data, np.ones(window_size) / window_size, mode='valid')
+
+    window_size = 200  # Adjust this value based on the degree of smoothing desired
+    smoothed_load_cell = moving_average(load_cell, window_size)
+
+    # Downsampling the data
+    downsample_factor = 100
+    downsampled_timestampc_values = timestampc_values[:len(smoothed_load_cell):downsample_factor]
+    downsampled_load_cell = smoothed_load_cell[::downsample_factor]
+
+    fig, ax = plt.subplots(figsize=(10, 6))
+    # ax.scatter(timestampc_values, load_cell, marker='o', s=2, label='Data', alpha=0.5)
+    # ax.plot(timestampc_values[:len(smoothed_load_cell)], smoothed_load_cell, label=f'Smoothed (Window Size = {window_size})', linestyle='--')
+    ax.scatter(timestampc_values[:len(smoothed_load_cell)], smoothed_load_cell, label=f'Smoothed (Window Size = {window_size})', s=2)
+    ax.plot(downsampled_timestampc_values, downsampled_load_cell, label=f'Downsampled (Factor = {downsample_factor})', color="orange")
+    # ax.plot(xp, poly(xp), 'r-', label='Polynomial Regression')
+    # ax.fill_between(xp, poly(xp) - confidence, poly(xp) + confidence, color='gray', alpha=0.3, label='95% Confidence Interval')
+    ax.xaxis.set_major_formatter(ticks_x)
+    ax.set_xlabel('Time [s]')
+    ax.set_ylabel('Load Cell')
+    ax.set_title(f'Load cell over time for {log_file} (SMA = {window_size}, downsampling = {downsample_factor})')
+    ax.grid(True)
+    ax.legend()
+    plt.show(block=False)
+
+    # Load cell vs PWM
+    # Apply same downsampling to the PWM inputs
+    downsampled_throttle = throttle[:len(smoothed_load_cell):downsample_factor]
+
+    fig, ax = plt.subplots(figsize=(10, 6))
+    # ax.scatter(throttle, load_cell, marker='o', s=2, label='Data', alpha=0.5)
+    ax.plot(downsampled_throttle, downsampled_load_cell, label=f'Downsampled (Factor = {downsample_factor})', color="orange", alpha=0.5)
+    ax.scatter(downsampled_throttle, downsampled_load_cell, s=2, label=f'Downsampled (Factor = {downsample_factor})')
+    # ax.plot(xp, poly(xp), 'r-', label='Polynomial Regression')
+    # ax.fill_between(xp, poly(xp) - confidence, poly(xp) + confidence, color='gray', alpha=0.3, label='95% Confidence Interval')
+    ax.set_xlabel('Throttle PWM')
+    ax.set_ylabel('Load Cell')
+    ax.set_title(f'Load Cell vs PWM {log_file} (downsampling = {downsample_factor})')
+    ax.grid(True)
+    ax.legend()
+    plt.show(block=False)
+
+    all_timestamps = np.concatenate((timestamp1_values, timestamp2_values, timestamp3_values, timestamp4_values))
+    all_timestamps.sort(kind='mergesort')
+    dt1 = timestamp1_values[1:] - timestamp1_values[:-1]
+    dt2 = timestamp2_values[1:] - timestamp2_values[:-1]
+    dt3 = timestamp3_values[1:] - timestamp3_values[:-1]
+    dt4 = timestamp4_values[1:] - timestamp4_values[:-1]
+    dtall = all_timestamps[1:] - all_timestamps[:-1]
+    fig, ax = plt.subplots(figsize=(10, 6))
+    ax.plot(timestamp4_values[1:], dt4, label='Phase Black 4', color="black", alpha=0.5)
+    ax.plot(timestamp3_values[1:], dt3, label='Phase Orange 3', color="orange", alpha=0.5)
+    ax.plot(timestamp2_values[1:], dt2, label='Phase Green 2', color="green", alpha=0.5)
+    ax.plot(timestamp1_values[1:], dt1, label='Neutral 2', color="blue", alpha=0.5)
+    ax.plot(all_timestamps[1:], dtall, marker='o', label='All samples', color="red", alpha=0.5)
+    ax.xaxis.set_major_formatter(ticks_x)
+    ax.yaxis.set_major_formatter(ticks_x)
+    ax.set_xlabel('Time [s]')
+    ax.set_ylabel('dt since last sample')
+    ax.set_title(f'Sampling interval for {log_file}')
+    ax.grid(True)
+    ax.legend()
     plt.show()
