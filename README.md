@@ -1,5 +1,17 @@
 # DRIFT
 
+## TLDR When running
+
+```bash
+# For the Arduino Due, Native USB port
+stty -F /dev/ttyACM0 raw -iexten -echo -echoe -echok -echoctl -echoke
+# For the Arduino Uno
+stty -F /dev/ttyACM0 cs8 115200 ignbrk -brkint -imaxbel -opost -onlcr -isig -icanon -iexten -echo -echoe -echok -echoctl -echoke noflsh -ixon -crtscts
+# Log output to file
+cat /dev/ttyACM0 >> test_format5.txt
+tail -f /dev/ttyACM0 -s 0.0001 >> test_format5.txt
+```
+
 ## Arduino setup
 
 Install the following libraries:
@@ -44,15 +56,20 @@ There are a few ways to do this:
   - This works fine, because serial output is always being read. The ESC will never actually go to the "inactive".
   - This should work well on all operating systems
   - NOTE: if you want to manually send commands to the Arduino from the serial monitor, make sure you select `LF` **line endings**. This will allow the Arduino to read and execute your command immediately, instead of waiting for the `Serial.readStringUntil()` function to time out
-- Using the `tail -f /dev/ttyACM0 -s 0.001` command in a terminal
-  - Very useful for logging directly to a file: `tail -f /dev/ttyACM0 -s 0.001 >> run.log`
-  - This also works fine, as long as you specify a fast refresh interval (`-s 0.001` will refresh every ~1ms). If you don't, and the Arduino starts spamming messages (eg. when reading throttle from the potentiometer), you might not be able to send another command until you stop `tail` (because the Arduino will always be too busy writing?). If the Arduino is not spamming, even the default interval (1s) is fine
-  - Note: this assumes that the Arduino is connected to the `/dev/ttyACM0` port on Linux/MacOS. TODO: figure out Windows
+- Using the terminal:
+  - First, if you're on Linux/Mac, run this to ensure that the output is read correctly at full speed:
+    - For the Arduino Due: `stty -F /dev/ttyACM0 raw -iexten -echo -echoe -echok -echoctl -echoke -onlcr`
+    - For the Arduino Uno: `stty -F /dev/ttyACM0 cs8 115200 ignbrk -brkint -imaxbel -opost -onlcr -isig -icanon -iexten -echo -echoe -echok -echoctl -echoke noflsh -ixon -crtscts`
+    - Replace `/dev/ttyACM0` with whatever serial port you're actually using
+  - Then, you can use one of the two following commands to read the serial output:
+    - `cat /dev/ttyACM0` <- this is preferable, especially for the Due Native USB port (but sometimes doesn't work as expected?)
+    - `tail -f /dev/ttyACM0 -s 0.001` <- make sure you specify a fast refresh interval (`-s 0.001` will refresh every ~1ms). Otherwise the Arduino's send buffer gets filled and things may not work properly (and the output will be all messed up)
+  - You can save the output directly into a file: `cat /dev/ttyACM0 >> run.log`
+  - Note: this assumes that the Arduino is connected to the `/dev/ttyACM0` port on Linux/MacOS. On Windows, it should be called `COMx` (e.g. `COM1`)
 - Using the `ser.readline()` function directly in the python script
-  - DO NOT USE THIS, it seems unreliable? (Not sure why - [check docs](https://pyserial.readthedocs.io/en/latest/shortintro.html#readline)) 
-  - This kinda works sometimes, but if the ESC is in the "inactive" state (single beep every 2-3 seconds), the script might NOT "wake up" the ESC in time - especially if it immediately starts sending commands.
+  - [Documentation](https://pyserial.readthedocs.io/en/latest/shortintro.html#readline)
+  - Works ok, but you need to know ahead of time what output to expect from the arduino and program your script accordingly. If you're not "in sync" with the Arduino (e.g. you expect a message but the Arduino is in a different state so it will never come) then the script could get stuck, or the Arduino might behave erratically 
   - TODO: check out `serial.tools.miniterm`
-  - TODO: try opening the serial connection as a file, and use regular read/write operations?
   
 You can also manually send commands from a terminal like this: `echo "t1000" > /dev/ttyACM0` (this will set the throttle to 1000). Note that this command only *writes* to serial, so you still nead something to read the serial response (either in another terminal, or the Serial Monitor in VSCode/Arduino IDE).
 
