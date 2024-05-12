@@ -6,6 +6,10 @@
 
 DueAdcFast DueAdcF(1024);  // 1024 measures is dimension of internal buffer. (min is 1024)
 
+#define SAMPLES (1) // Max ticks to count within a sampling interval
+volatile unsigned long results[SAMPLES][5] = {0};
+volatile unsigned long times[SAMPLES][5] = {0};
+
 unsigned int ESCpin = 9;
 unsigned int POTpin;  // DEFAULT POT PIN TO A5
 unsigned int pot_value;
@@ -14,8 +18,6 @@ unsigned int now;
 unsigned int throttle = 0;
 unsigned long start = 0;
 unsigned long stop = 0;
-volatile unsigned long results[5] = {0};
-volatile unsigned long times[5] = {0};
 
 // #define SPEED_MIN (1060) // Set the Minimum Speed in microseconds
 // #define SPEED_MAX (1860) // Set the Minimum Speed in microseconds
@@ -49,39 +51,52 @@ void ADC_Handler() {
   DueAdcF.adcHandler();
 }
 
+void mydelay(unsigned long interval){
+    unsigned int a = micros();
+    unsigned int b = micros();
+    while (b - a < interval) {
+        b = micros();
+    }
+}
+
 void measure_and_print_rpm() {
-  times[0] = micros();
-  results[0] = DueAdcF.ReadAnalogPin(A0); // Load cell
-  times[1] = micros();
-  results[1] = DueAdcF.ReadAnalogPin(A1);
-  times[2] = micros();
-  results[2] = DueAdcF.ReadAnalogPin(A2);
-  times[3] = micros();
-  results[3] = DueAdcF.ReadAnalogPin(A3);
-  times[4] = micros();
-  results[4] = DueAdcF.ReadAnalogPin(A4);
+  for (int i=0; i<SAMPLES; i++) {
+    times[i][0] = micros();
+    results[i][0] = DueAdcF.ReadAnalogPin(A0); // Load cell
+    times[i][1] = micros();
+    results[i][1] = DueAdcF.ReadAnalogPin(A1);
+    times[i][2] = micros();
+    results[i][2] = DueAdcF.ReadAnalogPin(A2);
+    times[i][3] = micros();
+    results[i][3] = DueAdcF.ReadAnalogPin(A3);
+    times[i][4] = micros();
+    results[i][4] = DueAdcF.ReadAnalogPin(A4);
+    mydelay(100);
+  }
+  for (int i=0; i<SAMPLES; i++) {
   mySerial.print(throttle);
   mySerial.print(',');
-  mySerial.print(times[1]);
+    mySerial.print(times[i][1]);
   mySerial.print(',');
-  mySerial.print(results[1]);
+    mySerial.print(results[i][1]);
   mySerial.print(',');
-  mySerial.print(times[2]);
+    mySerial.print(times[i][2]);
   mySerial.print(',');
-  mySerial.print(results[2]);
+    mySerial.print(results[i][2]);
   mySerial.print(',');
-  mySerial.print(times[3]);
+  mySerial.print(times[i][3]);
   mySerial.print(',');
-  mySerial.print(results[3]);
+  mySerial.print(results[i][3]);
   mySerial.print(',');
-  mySerial.print(times[4]);
+  mySerial.print(times[i][4]);
   mySerial.print(',');
-  mySerial.print(results[4]);
+  mySerial.print(results[i][4]);
   mySerial.print(',');
-  mySerial.print(times[0]); // Load cell
+  mySerial.print(times[i][0]); // Load cell
   mySerial.print(',');
-  mySerial.print(results[0]); // Load cell
+  mySerial.print(results[i][0]); // Load cell
   mySerial.print('\n');
+  }
 }
 
 void setup() {
@@ -93,7 +108,7 @@ void setup() {
   rdy.concat("ms\n");
   mySerial.print(rdy);
   // https://github.com/AntonioPrevitali/DueAdcFast/blob/main/examples/Sample3/Sample3.pde
-  analogReadResolution(12);
+  // analogReadResolution(12);
   DueAdcF.EnablePin(A0);  // Load cell
   DueAdcF.EnablePin(A1);  // Neutral point
   DueAdcF.EnablePin(A2);  // Phase 1
