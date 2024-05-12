@@ -1,5 +1,21 @@
 import serial
+import signal
+import sys
 import time
+
+def signal_handler(signal, frame):
+    global ser
+    print('Shutting down, sending STOP command')
+    ser.write("s\n".encode('ascii'))
+    resp = ser.readline()
+    print(resp)
+    # ser.write("s\n".encode('ascii'))
+    # ser.write("s\n".encode('ascii'))
+    print('Done')
+    ser.close()
+    sys.exit(0)
+
+signal.signal(signal.SIGINT, signal_handler)
 
 def since(t0):
     t = time.time()
