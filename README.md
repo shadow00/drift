@@ -14,11 +14,12 @@ tail -f /dev/ttyACM0 -s 0.0001 >> test_format5.txt
 
 ## Arduino setup
 
-Install the following libraries:
+Install the following Arduino libraries:
 
 ```
 Servo
 RC_ESC
+DueAdcFast
 ```
 
 Then, open `drift.ino`, compile it, and upload it to the board.
