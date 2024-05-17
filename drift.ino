@@ -127,7 +127,8 @@ void setup() {
                              // 255 is approx. 7812 Hz (sampling rate)
   // https://www.arduino.cc/reference/en/language/functions/external-interrupts/attachinterrupt/
   // attachInterrupt(pin, ISR, mode)
-  pinMode(HALL_pin, INPUT_PULLUP);
+  // pinMode(HALL_pin, INPUT_PULLUP);
+  pinMode(HALL_pin, INPUT);
   attachInterrupt(HALL_pin, got_tick, CHANGE);
 }
 
