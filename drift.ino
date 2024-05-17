@@ -23,7 +23,7 @@ uint8_t serial_out[LINE_BYTES];
 unsigned int ESC_pin = 9;
 unsigned int HALL_pin = 50;
 unsigned int LOAD_pin = A0;
-unsigned int POTpin;  // DEFAULT POT PIN TO A5
+unsigned int POT_pin;  // DEFAULT POT PIN TO A5
 unsigned int pot_value;
 unsigned int load_value;
 unsigned int now;
@@ -121,7 +121,7 @@ void setup() {
   // https://github.com/AntonioPrevitali/DueAdcFast/blob/main/examples/Sample3/Sample3.pde
   // analogReadResolution(12);
   DueAdcF.EnablePin(LOAD_pin);  // Load cell (A0)
-  DueAdcF.EnablePin(POTpin);  // Throttle Pot
+  DueAdcF.EnablePin(POT_pin);  // Throttle Pot
   DueAdcF.Start1Mhz();       // max speed 1Mhz (sampling rate)
   // DueAdcF.Start(255);        // with prescaler value form 3 to 255.
                              // 255 is approx. 7812 Hz (sampling rate)
@@ -160,12 +160,12 @@ void loop() {
       //   mySerial.print(thr_str);
       //   print_thr = false;
       // }
-      pot_value = DueAdcF.ReadAnalogPin(POTpin);
+      pot_value = DueAdcF.ReadAnalogPin(POT_pin);
       throttle = map(pot_value, 0, 4096, SPEED_MIN, SPEED_MAX);
       // throttle = map(pot_value, 0, 4096, SPEED_MIN, 1300); // Limit throttle
       // throttle = 1150;
       // pot_str = "Pin ";
-      // pot_str.concat(POTpin);
+      // pot_str.concat(POT_pin);
       // pot_str.concat(" - Set throttle to ");
       // pot_str.concat(throttle);
       // mySerial.println(pot_str);
@@ -240,7 +240,7 @@ void loop() {
     // cmd = thr_command;
   } else if (command.startsWith(String(pot_command))) {
     // print_thr = true;
-    POTpin = A5; // DEFAULT POT PIN TO A5
+    POT_pin = A5; // DEFAULT POT PIN TO A5
     // "pa0"
     // if (cmdlen > 1) {
     //   String pot_str = command.substring(1);  // Assume there is no space after the 'p'
@@ -252,12 +252,12 @@ void loop() {
     //     // https://github.com/arduino/ArduinoCore-avr/blob/master/variants/standard/pins_arduino.h#L28-L72
     //     // https://github.com/arduino/ArduinoCore-mbed/blob/main/variants/GIGA/pins_arduino.h#L21-L56
     //     int analog_pin_num = pot_str.substring(1).toInt();
-    //     POTpin = NUM_DIGITAL_PINS - NUM_ANALOG_INPUTS + analog_pin_num;
+    //     POT_pin = NUM_DIGITAL_PINS - NUM_ANALOG_INPUTS + analog_pin_num;
     //   } else if (isDigit(pot_str[0])) {
-    //     POTpin = pot_str.substring(0).toInt();
+    //     POT_pin = pot_str.substring(0).toInt();
     //   }
     // } else {
-    //   POTpin = A5; // DEFAULT POT PIN TO A5
+    //   POT_pin = A5; // DEFAULT POT PIN TO A5
     // }
     // cmd = pot_command;
   } else if (command.startsWith(String(load_command))) {
