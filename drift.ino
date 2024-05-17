@@ -51,6 +51,7 @@ const char escpin_command = 'e';
 const char nothing_to_do = (char)0;
 char cmd = nothing_to_do;  // Default command on first start
 bool print_thr = true;
+bool pot_on = false;
 String thr_str;
 String pot_str;
 
@@ -235,14 +236,22 @@ void loop() {
     print_thr = true;
     if (cmdlen > 1 && cmdlen < 6) { // match "t0" - "t1024"
       throttle = command.substring(1).toInt();
+      // If we have previously enabled the POT_pin, we must disable it
+      if (pot_on == true) {
+        DueAdcF.Stop();
+        DueAdcF.DisEnabPin();
+        DueAdcF.EnablePin(LOAD_pin);  // Load Cell Pin
+        DueAdcF.Start1Mhz();
+        pot_on = false;
+      }
     } else {
       cmd = nothing_to_do;
     }
     // cmd = thr_command;
   } else if (command.startsWith(String(pot_command))) {
     // Changing active ADC pins: first stop the ADC, then disable all pins, then enable the new pins, and restart the ADC
-    DueAdcF.Stop();  // Throttle Pot
-    DueAdcF.DisEnabPin();  // Throttle Pot
+    DueAdcF.Stop();
+    DueAdcF.DisEnabPin();
     // print_thr = true;
     // POT_pin = A5; // DEFAULT POT PIN TO A5
     // "pa0"
@@ -265,6 +274,7 @@ void loop() {
     DueAdcF.EnablePin(POT_pin);  // Throttle Pot
     DueAdcF.EnablePin(LOAD_pin);  // Load Cell Pin
     DueAdcF.Start1Mhz();
+    pot_on = true;  // Set the flag - the ADC is running with the pot pin enabled
     // cmd = pot_command;
   } else if (command.startsWith(String(load_command))) {
     print_thr = false;
