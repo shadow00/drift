@@ -6,11 +6,23 @@
 
 DueAdcFast DueAdcF(1024);  // 1024 measures is dimension of internal buffer. (min is 1024)
 
-#define SAMPLES (1) // Max ticks to count within a sampling interval
-volatile unsigned long results[SAMPLES][5] = {0};
-volatile unsigned long times[SAMPLES][5] = {0};
+#define EXTRA_BITS (3) // Extra bits of precision with decimation; MAX 4 if using uint16_t to store values
+#define SAMPLES (1<<2*EXTRA_BITS) // 3 extra bits of precision with decimation
+#define LINE_BYTES (14) // Byte length of each output line
+// #define DELTA_T (10) // 10 microeconds
+#define DELTA_T (10 * 1000) // 10 milliseconds
+volatile uint16_t ticks = 0;
+volatile uint16_t ticks_result = 0;
+volatile uint32_t times[2] = {0};  // For hall sensor ticks
+volatile uint32_t times_result[2] = {0};  // For hall sensor ticks
+uint16_t load_cell[SAMPLES] = {0};
+uint32_t avg_load_cell = 0;
+uint16_t loops = 0;
+uint8_t serial_out[LINE_BYTES];
 
 unsigned int ESCpin = 9;
+unsigned int HALL_pin = 50;
+unsigned int LOAD_pin = A0;
 unsigned int POTpin;  // DEFAULT POT PIN TO A5
 unsigned int pot_value;
 unsigned int load_value;
@@ -59,44 +71,43 @@ void mydelay(unsigned long interval){
     }
 }
 
+void got_tick() {
+  ticks++;
+  times[1] = micros();
+}
+
 void measure_and_print_rpm() {
-  for (int i=0; i<SAMPLES; i++) {
-    times[i][0] = micros();
-    results[i][0] = DueAdcF.ReadAnalogPin(A0); // Load cell
-    times[i][1] = micros();
-    results[i][1] = DueAdcF.ReadAnalogPin(A1);
-    times[i][2] = micros();
-    results[i][2] = DueAdcF.ReadAnalogPin(A2);
-    times[i][3] = micros();
-    results[i][3] = DueAdcF.ReadAnalogPin(A3);
-    times[i][4] = micros();
-    results[i][4] = DueAdcF.ReadAnalogPin(A4);
-    mydelay(100);
+  loops = 0;
+  avg_load_cell = 0;
+  load_cell[SAMPLES] = {0};
+  times[0] = micros(); // Start time
+  times[1] = micros(); // End time
+  now = times[1];
+  ticks = 0; // Reset the value just before entering the loop
+  // WARNING: This code assumes that we can get at least #SAMPLES before we exit the loop
+  // If we don't, then some of the load cell readings will still be 0
+  // while ((times[1] - times[0] < DELTA_T) || (ticks == 0 && (times[1] - times[0] < 2*DELTA_T))) {
+  while ((now - times[0] < DELTA_T) || (ticks == 0 && (now - times[0] < 2*DELTA_T))) {
+    // NOTE: if we loop more than #SAMPLES times, we'll overwrite some values
+    load_cell[loops % SAMPLES] = DueAdcF.ReadAnalogPin(LOAD_pin);
+    // times[1] = micros();
+    now = micros();
+    loops++;
   }
-  for (int i=0; i<SAMPLES; i++) {
-  mySerial.print(throttle);
-  mySerial.print(',');
-    mySerial.print(times[i][1]);
-  mySerial.print(',');
-    mySerial.print(results[i][1]);
-  mySerial.print(',');
-    mySerial.print(times[i][2]);
-  mySerial.print(',');
-    mySerial.print(results[i][2]);
-  mySerial.print(',');
-  mySerial.print(times[i][3]);
-  mySerial.print(',');
-  mySerial.print(results[i][3]);
-  mySerial.print(',');
-  mySerial.print(times[i][4]);
-  mySerial.print(',');
-  mySerial.print(results[i][4]);
-  mySerial.print(',');
-  mySerial.print(times[i][0]); // Load cell
-  mySerial.print(',');
-  mySerial.print(results[i][0]); // Load cell
-  mySerial.print('\n');
+  ticks_result = ticks; // Store the result asap to avoid more increments while preparing the printout
+  times_result[1] = times[1]; // Save the end value first, since it has more chance of getting updated
+  times_result[0] = times[0];
+  for (uint16_t i=0; i<SAMPLES; i++) {
+    avg_load_cell += load_cell[i];
   }
+  avg_load_cell = avg_load_cell >> EXTRA_BITS; // Decimation
+  // avg_load_cell = avg_load_cell / SAMPLES; // Averaging
+  (uint16_t &)serial_out[0] = (uint16_t)throttle;
+  (uint32_t &)serial_out[2] = (uint32_t)times[0]; // Start time
+  (uint16_t &)serial_out[6] = (uint16_t)ticks_result; // Ticks
+  (uint32_t &)serial_out[8] = (uint32_t)times[1]; // End time
+  (uint16_t &)serial_out[12] = (uint16_t)avg_load_cell; // Load Cell
+  mySerial.write((char *)serial_out, LINE_BYTES);
 }
 
 void setup() {
@@ -109,15 +120,15 @@ void setup() {
   mySerial.print(rdy);
   // https://github.com/AntonioPrevitali/DueAdcFast/blob/main/examples/Sample3/Sample3.pde
   // analogReadResolution(12);
-  DueAdcF.EnablePin(A0);  // Load cell
-  DueAdcF.EnablePin(A1);  // Neutral point
-  DueAdcF.EnablePin(A2);  // Phase 1
-  DueAdcF.EnablePin(A3);  // Phase 2
-  DueAdcF.EnablePin(A4);  // Phase 3
-  DueAdcF.EnablePin(A5);  // Throttle Pot
+  DueAdcF.EnablePin(LOAD_pin);  // Load cell (A0)
+  DueAdcF.EnablePin(POTpin);  // Throttle Pot
   DueAdcF.Start1Mhz();       // max speed 1Mhz (sampling rate)
   // DueAdcF.Start(255);        // with prescaler value form 3 to 255.
                              // 255 is approx. 7812 Hz (sampling rate)
+  // https://www.arduino.cc/reference/en/language/functions/external-interrupts/attachinterrupt/
+  // attachInterrupt(pin, ISR, mode)
+  pinMode(HALL_pin, INPUT_PULLUP);
+  attachInterrupt(HALL_pin, got_tick, CHANGE);
 }
 
 void loop() {  
