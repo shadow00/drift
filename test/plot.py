@@ -10,11 +10,12 @@ from format3 import plot_data_format3
 from format4 import plot_data_format4
 from format5 import plot_data_format5
 from format6 import plot_data_format6
+from format7 import plot_data_format7
 from formatlc import plot_data_load_cell
 
 
 # List all *.txt files in the current directory
-txt_files = [file for file in os.listdir() if file.endswith('.txt')]
+txt_files = [file for file in os.listdir() if file.endswith('.txt') or file.endswith('.csv')]
 
 # Print numbered list of files
 print("Available log files:")
@@ -40,6 +41,8 @@ if 0 <= selected_file_index < len(txt_files):
         plot_data_format5(selected_file)
     elif 'format6' in selected_file:
         plot_data_format6(selected_file)
+    elif 'format7' in selected_file:
+        plot_data_format7(selected_file)
     elif 'load_cell' in selected_file:
         plot_data_load_cell(selected_file)
     else:
