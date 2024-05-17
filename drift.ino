@@ -121,7 +121,7 @@ void setup() {
   // https://github.com/AntonioPrevitali/DueAdcFast/blob/main/examples/Sample3/Sample3.pde
   // analogReadResolution(12);
   DueAdcF.EnablePin(LOAD_pin);  // Load cell (A0)
-  DueAdcF.EnablePin(POT_pin);  // Throttle Pot
+  // DueAdcF.EnablePin(POT_pin);  // Throttle Pot // This is useless without a predefined value!
   DueAdcF.Start1Mhz();       // max speed 1Mhz (sampling rate)
   // DueAdcF.Start(255);        // with prescaler value form 3 to 255.
                              // 255 is approx. 7812 Hz (sampling rate)
@@ -153,6 +153,9 @@ void loop() {
       // cmd = nothing_to_do;
       break;
     case pot_command:
+      pot_value = DueAdcF.ReadAnalogPin(POT_pin);
+      throttle = map(pot_value, 0, 4095, SPEED_MIN, SPEED_MAX);
+      // throttle = map(pot_value, 0, 4095, SPEED_MIN, 1300); // Limit throttle
       // if (print_thr) {
       //   thr_str = "Set throttle to ";
       //   thr_str.concat(throttle);
@@ -160,9 +163,6 @@ void loop() {
       //   mySerial.print(thr_str);
       //   print_thr = false;
       // }
-      pot_value = DueAdcF.ReadAnalogPin(POT_pin);
-      throttle = map(pot_value, 0, 4096, SPEED_MIN, SPEED_MAX);
-      // throttle = map(pot_value, 0, 4096, SPEED_MIN, 1300); // Limit throttle
       // throttle = 1150;
       // pot_str = "Pin ";
       // pot_str.concat(POT_pin);
@@ -239,26 +239,31 @@ void loop() {
     }
     // cmd = thr_command;
   } else if (command.startsWith(String(pot_command))) {
+    // Changing active ADC pins: first stop the ADC, then disable all pins, then enable the new pins, and restart the ADC
+    DueAdcF.Stop();  // Throttle Pot
+    DueAdcF.DisEnabPin();  // Throttle Pot
     // print_thr = true;
-    POT_pin = A5; // DEFAULT POT PIN TO A5
+    // POT_pin = A5; // DEFAULT POT PIN TO A5
     // "pa0"
-    // if (cmdlen > 1) {
-    //   String pot_str = command.substring(1);  // Assume there is no space after the 'p'
-    //   pot_str.toLowerCase();
-    //   // // if (pot_str.startsWith("a") && isDigit(pot_str.substring(1))) {}
-    //   // if (pot_str.startsWith("a") && pot_str.substring(1).toInt()) {
-    //   if (pot_str.startsWith("a")) {
-    //     // Analog pins "a0" - "a7" for stuff like Arduino Uno, or "a11" for the Arduino Giga R1
-    //     // https://github.com/arduino/ArduinoCore-avr/blob/master/variants/standard/pins_arduino.h#L28-L72
-    //     // https://github.com/arduino/ArduinoCore-mbed/blob/main/variants/GIGA/pins_arduino.h#L21-L56
-    //     int analog_pin_num = pot_str.substring(1).toInt();
-    //     POT_pin = NUM_DIGITAL_PINS - NUM_ANALOG_INPUTS + analog_pin_num;
-    //   } else if (isDigit(pot_str[0])) {
-    //     POT_pin = pot_str.substring(0).toInt();
-    //   }
-    // } else {
-    //   POT_pin = A5; // DEFAULT POT PIN TO A5
-    // }
+    if (cmdlen > 1) {
+      String pot_str = command.substring(1);  // Assume there is no space after the 'p'
+      pot_str.toLowerCase();
+      // TODO: Maybe implement a bounds check? E.g. if we know pin A75 doesn't exist, skip the command
+      // Analog pins "a0" - "a7" for stuff like Arduino Uno, or "a11" for the Arduino Giga R1
+      // https://github.com/arduino/ArduinoCore-avr/blob/master/variants/standard/pins_arduino.h#L28-L72
+      // https://github.com/arduino/ArduinoCore-mbed/blob/main/variants/GIGA/pins_arduino.h#L21-L56
+      // POT_pin = NUM_DIGITAL_PINS - NUM_ANALOG_INPUTS + analog_pin_num;
+      if (pot_str.startsWith("a")) {
+        POT_pin = A0 + pot_str.substring(1).toInt();;
+      } else if (isDigit(pot_str[0])) {
+        POT_pin = A0 + pot_str.substring(0).toInt();
+      }
+    } else {
+      POT_pin = A5; // DEFAULT POT PIN TO A5
+    }
+    DueAdcF.EnablePin(POT_pin);  // Throttle Pot
+    DueAdcF.EnablePin(LOAD_pin);  // Load Cell Pin
+    DueAdcF.Start1Mhz();
     // cmd = pot_command;
   } else if (command.startsWith(String(load_command))) {
     print_thr = false;
