@@ -20,7 +20,7 @@ uint32_t avg_load_cell = 0;
 uint16_t loops = 0;
 uint8_t serial_out[LINE_BYTES];
 
-unsigned int ESCpin = 9;
+unsigned int ESC_pin = 9;
 unsigned int HALL_pin = 50;
 unsigned int LOAD_pin = A0;
 unsigned int POTpin;  // DEFAULT POT PIN TO A5
@@ -38,7 +38,7 @@ unsigned long stop = 0;
 #define SPEED_MAX (2000) // Set the Minimum Speed in microseconds
 #define ARM_VAL (1000) // Set the Arm Value in microseconds
 
-ESC myESC(ESCpin, SPEED_MIN, SPEED_MAX, ARM_VAL); // ESC_Name (PIN, Minimum Value, Maximum Value, Arm Value)
+ESC myESC(ESC_pin, SPEED_MIN, SPEED_MAX, ARM_VAL); // ESC_Name (PIN, Minimum Value, Maximum Value, Arm Value)
 
 String command;
 const char arm_command = 'a';
@@ -196,13 +196,13 @@ void loop() {
       cmd = nothing_to_do;
       break;
     case escpin_command:
-      if (ESCpin > 1 && ESCpin <= NUM_DIGITAL_PINS) {
+      if (ESC_pin > 1 && ESC_pin <= NUM_DIGITAL_PINS) {
         mySerial.print("Setting ESC to pin ");
-        mySerial.println(ESCpin);
+        mySerial.println(ESC_pin);
         cmd = nothing_to_do;
       } else {
         mySerial.print("WARNING: Invalid ESC pin ");
-        mySerial.println(ESCpin);
+        mySerial.println(ESC_pin);
         cmd = nothing_to_do;
       }
       break;
@@ -271,8 +271,8 @@ void loop() {
     // myESC.~ESC();
     // Warning: no error checking. If the string is invalid, this will return 0
     // and it will be rejected in the loop
-    ESCpin = command.substring(1).toInt();
-    myESC = ESC(ESCpin, SPEED_MIN, SPEED_MAX, ARM_VAL); // ESC_Name (PIN, Minimum Value, Maximum Value, Arm Value)
+    ESC_pin = command.substring(1).toInt();
+    myESC = ESC(ESC_pin, SPEED_MIN, SPEED_MAX, ARM_VAL); // ESC_Name (PIN, Minimum Value, Maximum Value, Arm Value)
   } else {
     // cmd = wrong_command;
   }
