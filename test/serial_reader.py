@@ -26,10 +26,19 @@ def generate_file_name(format_number):
 file_name = generate_file_name(format_number)
 
 s = serial.Serial('/dev/ttyACM0', 115200)
+# CHUNKSIZE = 10
+# BYTES_FORMAT = '<HIHH'
+# CHANNELS = 4
+# CHANNELS_TO_PLOT = [0,1,2,3]
+# CHUNKSIZE = 12
+# BYTES_FORMAT = '<III'
+# CHANNELS = 3
+# CHANNELS_TO_PLOT = [0,1,2]
+CHUNKSIZE = 14
+BYTES_FORMAT = '<HIHIH'
 CHANNELS = 5
 CHANNELS_TO_PLOT = [1,2,3,4]
 SAMPLES = 100
-CHUNKSIZE = 14
 CHUNKS = 10
 PLOT_GET = 1000
 PLOT_BUFFER = 10000
@@ -86,7 +95,7 @@ class SerialReader(threading.Thread):
                     continue
                 elif in_waiting % self.chunkSize * self.chunks == 0:
                     resp = s.read(size=in_waiting)
-                    resp2 = [struct.unpack('<HIHIH', resp[i*self.chunkSize : (i+1)*self.chunkSize]) for i in range(0, in_waiting // self.chunkSize)]
+                    resp2 = [struct.unpack(BYTES_FORMAT, resp[i*self.chunkSize : (i+1)*self.chunkSize]) for i in range(0, in_waiting // self.chunkSize)]
                     # resp2 = [struct.unpack('<HIHH', resp[i*self.chunkSize : (i+1)*self.chunkSize]) for i in range(0, in_waiting // self.chunkSize)]
                     resp2 = np.array(resp2, dtype=np.uint32)
                     np.savetxt(file, resp2, delimiter=',', fmt='%d')
