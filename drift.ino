@@ -11,7 +11,9 @@ DueAdcFast DueAdcF(1024);  // 1024 measures is dimension of internal buffer. (mi
 #define LINE_BYTES (14) // Byte length of each output line
 #define LINE_BYTES_LC (12) // Byte length of each output line in Load Cell mode
 // #define DELTA_T (10) // 10 microeconds
-#define DELTA_T (10 * 1000) // 10 milliseconds
+// #define DELTA_T (10 * 1000) // 10 milliseconds
+#define DELTA_T_MS (5) // milliseconds
+#define DELTA_T (DELTA_T_MS * 1000) // microseconds
 volatile uint16_t ticks = 0;
 volatile uint16_t ticks_result = 0;
 volatile uint32_t times[2] = {0};  // For hall sensor ticks
