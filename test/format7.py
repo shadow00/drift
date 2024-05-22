@@ -47,13 +47,16 @@ def plot_data_format7(log_file):
     # Plot RPM and Load Cell vs time
     fig, (ax1, ax2) = plt.subplots(2, 1)
     ax1 = plt.subplot(2, 1, 1)
+    ax1_2 = ax1.twinx()
+    ax1_2.plot(timestamp2, hall_ticks, label='Hall Ticks', color='blue', alpha=0.5)
     ax1.plot(timestamp2, rpm, label='RPM', color='green')
-    ax1.plot(timestamp2, hall_ticks, label='Hall Ticks', color='blue')
     ax1.set_xlabel('Timestamp')
     ax1.set_ylabel('RPM')
+    ax1_2.set_ylabel('Hall Ticks')
     ax1.set_title(f'RPM over time for {log_file} (Format 7)')
     ax1.grid(True)
     ax1.legend()
+    ax1_2.legend()
 
     # Second subplot for comparison plot
     ax2 = plt.subplot(2, 1, 2)
@@ -71,6 +74,7 @@ def plot_data_format7(log_file):
     ax1.xaxis.set_major_formatter(ticks_x)
     ax2.xaxis.set_major_formatter(ticks_x)
     
+    fig.tight_layout()  # otherwise the right y-label is slightly clipped
     plt.show(block=False)
 
     # Load cell vs time
