@@ -103,11 +103,13 @@ void measure_and_print_rpm() {
   ticks_result = ticks; // Store the result asap to avoid more increments while preparing the printout
   times_result[1] = times[1]; // Save the end value first, since it has more chance of getting updated
   times_result[0] = times[0];
-  for (uint16_t i=0; i<SAMPLES; i++) {
+  // for (uint32_t i=0; i<min(loops, SAMPLES); i++) {
+  for (uint32_t i=0; i<SAMPLES; i++) {
     avg_load_cell += load_cell[i];
   }
   avg_load_cell = avg_load_cell >> EXTRA_BITS; // Decimation
   // avg_load_cell = avg_load_cell / SAMPLES; // Averaging
+  // avg_load_cell = avg_load_cell / min(loops, SAMPLES); // Averaging
   (uint16_t &)serial_out[0] = (uint16_t)throttle;
   (uint32_t &)serial_out[2] = (uint32_t)times[0]; // Start time
   (uint16_t &)serial_out[6] = (uint16_t)ticks_result; // Ticks
