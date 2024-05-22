@@ -9,6 +9,7 @@ DueAdcFast DueAdcF(1024);  // 1024 measures is dimension of internal buffer. (mi
 #define EXTRA_BITS (3) // Extra bits of precision with decimation; MAX 4 if using uint16_t to store values
 #define SAMPLES (1<<2*EXTRA_BITS) // 3 extra bits of precision with decimation
 #define LINE_BYTES (14) // Byte length of each output line
+#define LINE_BYTES_LC (12) // Byte length of each output line in Load Cell mode
 // #define DELTA_T (10) // 10 microeconds
 #define DELTA_T (10 * 1000) // 10 milliseconds
 volatile uint16_t ticks = 0;
@@ -28,6 +29,8 @@ unsigned int pot_value;
 unsigned int load_value;
 unsigned int now;
 unsigned int throttle = 0;
+unsigned long lc_extra_bits = 0;
+uint32_t lc_samples = 0;
 unsigned long start = 0;
 unsigned long stop = 0;
 
@@ -179,12 +182,17 @@ void loop() {
         mySerial.print("Reading LOAD CELL\n");
         print_thr = false;
       }
-      now = micros();
-      load_value = DueAdcF.ReadAnalogPin(A0);  // Load Cell
-      mySerial.print(now);
-      mySerial.print(',');
-      mySerial.print(load_value);
-      mySerial.print('\n');
+      avg_load_cell = 0;
+      times[0] = micros();
+      for (uint32_t i=0; i<lc_samples; i++) {
+        avg_load_cell += DueAdcF.ReadAnalogPin(LOAD_pin);
+      }
+      times[1] = micros();
+      avg_load_cell = avg_load_cell >> lc_extra_bits; // Decimation
+      (uint32_t &)serial_out[0] = (uint32_t)times[0]; // Start time
+      (uint32_t &)serial_out[4] = (uint32_t)avg_load_cell; // Load Cell
+      (uint32_t &)serial_out[8] = (uint32_t)times[1]; // End time
+      mySerial.write((char *)serial_out, LINE_BYTES_LC);
       break;
     case stop_command:
       myESC.stop(); // Send the Stop value
@@ -278,6 +286,33 @@ void loop() {
     // cmd = pot_command;
   } else if (command.startsWith(String(load_command))) {
     print_thr = false;
+    // Note: adding N extra bits of precision requires 4^N samples, thus
+    // reducing the sampling rate by 4^N.
+    // We set the ADC to run in 12 bit mode, which means we could add up to
+    // 20/2=10 extra bits if we store the result in a uint32_t (because we'd
+    // need another 4^10=2^20 extra samples, each sample is 12 bits, and
+    // 2**12 * 2**20 = 2**32 so we could overflow if we try to add more).
+    if (cmdlen > 0 && cmdlen < 4) { // match "l" or "l0" - "l10"
+      if (cmdlen > 1) { // match "l0" - "l10"
+        lc_extra_bits = command.substring(1).toInt();
+        if (lc_extra_bits > 10) {
+          lc_extra_bits = 10;
+        }
+      } else {
+        lc_extra_bits = 4;
+      }
+      lc_samples = (1<<2*lc_extra_bits);
+      // If we have previously enabled the POT_pin, we must disable it
+      if (pot_on == true) {
+        DueAdcF.Stop();
+        DueAdcF.DisEnabPin();
+        DueAdcF.EnablePin(LOAD_pin);  // Load Cell Pin
+        DueAdcF.Start1Mhz();
+        pot_on = false;
+      }
+    } else {
+      cmd = nothing_to_do;
+    }
     // cmd = load_command;
   } else if (command.startsWith(String(stop_command))) {
     // cmd = stop_command;
