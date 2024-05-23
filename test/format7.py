@@ -48,15 +48,31 @@ def plot_data_format7(log_file):
     fig, (ax1, ax2) = plt.subplots(2, 1)
     ax1 = plt.subplot(2, 1, 1)
     ax1_2 = ax1.twinx()
-    ax1_2.plot(timestamp2, hall_ticks, label='Hall Ticks', color='blue', alpha=0.5)
-    ax1.plot(timestamp2, rpm, label='RPM', color='green')
+    ax1_3 = ax1.twinx()
+    p1, = ax1.plot(timestamp2, throttle, label='PWM', color='orange')
+    p2, = ax1_2.plot(timestamp2, hall_ticks, label='Hall Ticks', color='green', alpha=0.5)
+    p3, = ax1_3.plot(timestamp2, rpm, label='RPM', color='blue')
     ax1.set_xlabel('Timestamp')
-    ax1.set_ylabel('RPM')
+    ax1.set_ylabel('PWM')
     ax1_2.set_ylabel('Hall Ticks')
+    ax1_3.set_ylabel('RPM')
     ax1.set_title(f'RPM over time for {log_file} (Format 7)')
     ax1.grid(True)
-    ax1.legend()
-    ax1_2.legend()
+
+    lines = [p1, p2, p3]
+    ax1.legend(lines, [l.get_label() for l in lines])
+
+    ax1_3.spines["right"].set_position(("axes", 1.05))
+    ax1.yaxis.label.set_color(p1.get_color())
+    ax1_2.yaxis.label.set_color(p2.get_color())
+    ax1_3.yaxis.label.set_color(p3.get_color())
+
+    ax1_2.spines["right"].set_edgecolor(p2.get_color())
+    ax1_3.spines["right"].set_edgecolor(p3.get_color())
+
+    ax1.tick_params(axis='y', colors=p1.get_color())
+    ax1_2.tick_params(axis='y', colors=p2.get_color())
+    ax1_3.tick_params(axis='y', colors=p3.get_color())
 
     # Second subplot for comparison plot
     ax2 = plt.subplot(2, 1, 2)
@@ -74,7 +90,8 @@ def plot_data_format7(log_file):
     ax1.xaxis.set_major_formatter(ticks_x)
     ax2.xaxis.set_major_formatter(ticks_x)
     
-    fig.tight_layout()  # otherwise the right y-label is slightly clipped
+    fig.subplots_adjust(left=0.05, right=0.9, top=0.95, bottom=0.05, hspace=0.2)
+    # fig.tight_layout()  # otherwise the right y-label is slightly clipped
     plt.show(block=False)
 
     # Load cell vs time
