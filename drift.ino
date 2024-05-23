@@ -234,10 +234,11 @@ void loop() {
       }
       times[1] = micros();
       avg_load_cell = avg_load_cell >> lc_extra_bits; // Decimation
-      (uint32_t &)serial_out[0] = (uint32_t)times[0]; // Start time
-      (uint32_t &)serial_out[4] = (uint32_t)avg_load_cell; // Load Cell
-      (uint32_t &)serial_out[8] = (uint32_t)times[1]; // End time
-      mySerial.write((char *)serial_out, LINE_BYTES_LC);
+      (uint32_t &)serial_out[0] = (uint32_t)0xfcfffcff; // This is a load cell reading!
+      (uint32_t &)serial_out[4] = (uint32_t)times[0]; // Start time
+      (uint32_t &)serial_out[8] = (uint32_t)avg_load_cell; // Load Cell
+      (uint32_t &)serial_out[12] = (uint32_t)times[1]; // End time
+      mySerial.write((char *)serial_out, LINE_BYTES);
       break;
     case stop_command:
       myESC.stop(); // Send the Stop value
@@ -335,7 +336,7 @@ void loop() {
     pot_on = true;  // Set the flag - the ADC is running with the pot pin enabled
     // cmd = pot_command;
   } else if (command.startsWith(String(load_command))) {
-    print_thr = false;
+    print_thr = true;
     // Note: adding N extra bits of precision requires 4^N samples, thus
     // reducing the sampling rate by 4^N.
     // We set the ADC to run in 12 bit mode, which means we could add up to
