@@ -1,5 +1,7 @@
 import os
 import re
+import sys
+import signal
 import numpy as np
 import matplotlib.pyplot as plt
 from scipy.stats import linregress
@@ -13,6 +15,14 @@ from format6 import plot_data_format6
 from format7 import plot_data_format7
 from formatlc import plot_data_load_cell
 
+
+def signal_handler(signal, frame):
+    print('Closing plots')
+    plt.close('all')
+    print('Done')
+    sys.exit(0)
+
+signal.signal(signal.SIGINT, signal_handler)
 
 # List all *.txt files in the current directory
 txt_files = [file for file in os.listdir() if file.endswith('.txt') or file.endswith('.csv')]
