@@ -170,15 +170,27 @@ void loop() {
     {
     case arm_command:
       myESC.arm(); // Send the Arm value
-      mySerial.println("Sending ARM command");
+      // mySerial.println("Sending ARM command");
+      (uint32_t &)serial_out[0] = (uint32_t)0xffff; // "Not a throttle line"
+      (uint32_t &)serial_out[4] = (uint32_t)0xfff1; // "Sending ARM command"
+      (uint32_t &)serial_out[8] = (uint32_t)0xfff1; // "Sending ARM command"
+      (uint32_t &)serial_out[12] = (uint32_t)0xffff; // (End of line)
+      mySerial.write((char *)serial_out, LINE_BYTES);
       cmd = nothing_to_do;
       break;
     case thr_command:
       if (print_thr) {
-        thr_str = "Set throttle to ";
-        thr_str.concat(throttle);
-        thr_str.concat('\n');
-        mySerial.print(thr_str);
+        // thr_str = "Set throttle to ";
+        // thr_str.concat(throttle);
+        // thr_str.concat('\n');
+        // mySerial.print(thr_str);
+        (uint32_t &)serial_out[0] = (uint32_t)0xffff; // "Not a throttle line"
+        (uint16_t &)serial_out[4] = (uint16_t)0xfff2; // "Set throttle to "
+        (uint16_t &)serial_out[6] = (uint16_t)throttle; // Throttle value
+        (uint16_t &)serial_out[8] = (uint16_t)0xfff2; // "Set throttle to "
+        (uint16_t &)serial_out[10] = (uint16_t)throttle; // Throttle value
+        (uint32_t &)serial_out[12] = (uint32_t)0xffff; // (End of line)
+        mySerial.write((char *)serial_out, LINE_BYTES);
         print_thr = false;
       }
       myESC.speed(throttle); // sets the ESC speed according to the scaled value
@@ -207,7 +219,12 @@ void loop() {
       break;
     case load_command:
       if (print_thr) {
-        mySerial.print("Reading LOAD CELL\n");
+        // mySerial.print("Reading LOAD CELL\n");
+        (uint32_t &)serial_out[0] = (uint32_t)0xffff; // "Not a throttle line"
+        (uint32_t &)serial_out[4] = (uint32_t)0xfffc; // "Reading LOAD CELL"
+        (uint32_t &)serial_out[8] = (uint32_t)0xfffc; // "Reading LOAD CELL"
+        (uint32_t &)serial_out[12] = (uint32_t)0xffff; // (End of line)
+        mySerial.write((char *)serial_out, LINE_BYTES);
         print_thr = false;
       }
       avg_load_cell = 0;
@@ -224,7 +241,12 @@ void loop() {
       break;
     case stop_command:
       myESC.stop(); // Send the Stop value
-      mySerial.println("Sending STOP command");
+      // mySerial.println("Sending STOP command");
+      (uint32_t &)serial_out[0] = (uint32_t)0xffff; // "Not a throttle line"
+      (uint32_t &)serial_out[4] = (uint32_t)0xfff0; // "Sending STOP command"
+      (uint32_t &)serial_out[8] = (uint32_t)0xfff0; // "Sending STOP command"
+      (uint32_t &)serial_out[12] = (uint32_t)0xffff; // (End of line)
+      mySerial.write((char *)serial_out, LINE_BYTES);
       cmd = nothing_to_do;
       break;
     case calib_command:

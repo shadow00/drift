@@ -34,16 +34,39 @@ s = serial.Serial('/dev/ttyACM0', 115200)
 # BYTES_FORMAT = '<III'
 # CHANNELS = 3
 # CHANNELS_TO_PLOT = [0,1,2]
-CHUNKSIZE = 14
-BYTES_FORMAT = '<HIHIH'
+CHUNKSIZE = 16
+BYTES_FORMAT = '<HIHII'
 CHANNELS = 5
 CHANNELS_TO_PLOT = [1,2,3,4]
 SAMPLES = 100
-CHUNKS = 10
+CHUNKS = 1
 PLOT_GET = 1000
 PLOT_BUFFER = 10000
 DOWNSAMPLE = 1
 
+def match_bytes(sequence):
+    if sequence == b'\xff\xff\x00\x00':
+        return True
+    return False
+
+def handle_messages(sequence):
+    if sequence[0:4] != b'\xff\xff\x00\x00':
+        raise ValueError(f"Sequence '{sequence}' doesn't start with 0xffff, how did we get here?")
+    # elif sequence == 0xffff0000f0ff0000f0ff0000ffff0000:
+    elif sequence == b'\xff\xff\x00\x00\xf0\xff\x00\x00\xf0\xff\x00\x00\xff\xff\x00\x00':
+        print("Sending STOP command")
+    # elif sequence == 0xffff0000f1ff0000f1ff0000ffff0000:
+    elif sequence == b'\xff\xff\x00\x00\xf1\xff\x00\x00\xf1\xff\x00\x00\xff\xff\x00\x00':
+        print("Sending ARM command")
+    # elif sequence == 0xffff0000fcff0000fcff0000ffff0000:
+    elif sequence == b'\xff\xff\x00\x00\xfc\xff\x00\x00\xfc\xff\x00\x00\xff\xff\x00\x00':
+        print("Reading LOAD CELL")
+    # elif sequence == 0xffff0000f2ff0000f2ff0000ffff0000:
+    elif sequence[0:6] == b'\xff\xff\x00\x00\xf2\xff' and sequence[8:10] == b'\xf2\xff' and sequence[12:16] == b'\xff\xff\x00\x00':
+        thr_set = int.from_bytes(sequence[6:8], 'little')
+        print("Set throttle to", thr_set)
+    else:
+        print("sequence", sequence)
 
 class SerialReader(threading.Thread):
     """ Defines a thread for reading and buffering serial data.
@@ -91,11 +114,34 @@ class SerialReader(threading.Thread):
                 # resp2 = np.array([r.decode('ascii').rstrip().split(',') for r in resp], dtype=np.uint32)
                 # ----
                 in_waiting = s.in_waiting
-                if in_waiting < self.chunkSize * self.chunks:
+                if in_waiting == self.chunkSize:
+                    resp = s.read(size=self.chunkSize)
+                    # print(resp)
+                    if match_bytes(resp[0:4]):
+                        handle_messages(resp)
+                        # handle_messages(int.from_bytes(resp, 'big'))
+                        continue
+                    else:
+                        resp2 = [struct.unpack(BYTES_FORMAT, resp)]
+                        resp2 = np.array(resp2, dtype=np.uint32)
+                        np.savetxt(file, resp2, delimiter=',', fmt='%d')
+                        # print("r2", resp2)
+                elif in_waiting < self.chunkSize * self.chunks:
+                # if in_waiting < self.chunkSize:
                     continue
                 elif in_waiting % self.chunkSize * self.chunks == 0:
                     resp = s.read(size=in_waiting)
-                    resp2 = [struct.unpack(BYTES_FORMAT, resp[i*self.chunkSize : (i+1)*self.chunkSize]) for i in range(0, in_waiting // self.chunkSize)]
+                    resp2 = []
+                    for i in range(0, in_waiting // self.chunkSize):
+                        r = resp[i*self.chunkSize : (i+1)*self.chunkSize]
+                        # if match_bytes(int.from_bytes(r[0:3], 'little')):
+                        if match_bytes(r[0:4]):
+                            handle_messages(r)
+                            # handle_messages(int.from_bytes(r, 'big'))
+                            continue
+                        else:
+                            resp2.append(struct.unpack(BYTES_FORMAT, r))
+                    # resp2 = [struct.unpack(BYTES_FORMAT, resp[i*self.chunkSize : (i+1)*self.chunkSize]) for i in range(0, in_waiting // self.chunkSize)]
                     # resp2 = [struct.unpack('<HIHH', resp[i*self.chunkSize : (i+1)*self.chunkSize]) for i in range(0, in_waiting // self.chunkSize)]
                     resp2 = np.array(resp2, dtype=np.uint32)
                     np.savetxt(file, resp2, delimiter=',', fmt='%d')
