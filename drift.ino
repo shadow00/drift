@@ -8,7 +8,8 @@ DueAdcFast DueAdcF(1024);  // 1024 measures is dimension of internal buffer. (mi
 
 #define EXTRA_BITS (3) // Extra bits of precision with decimation; MAX 4 if using uint16_t to store values
 #define SAMPLES (1<<2*EXTRA_BITS) // 3 extra bits of precision with decimation
-#define LINE_BYTES (14) // Byte length of each output line
+#define SAMPLES_NEW (200) // Max ticks to count within a sampling interval
+#define LINE_BYTES (16) // Byte length of each output line
 #define LINE_BYTES_LC (12) // Byte length of each output line in Load Cell mode
 // #define DELTA_T (10) // 10 microeconds
 // #define DELTA_T (10 * 1000) // 10 milliseconds
@@ -19,8 +20,10 @@ volatile uint16_t ticks_result = 0;
 volatile uint32_t times[2] = {0};  // For hall sensor ticks
 volatile uint32_t times_result[2] = {0};  // For hall sensor ticks
 uint16_t load_cell[SAMPLES] = {0};
+uint32_t load_cell_new[SAMPLES_NEW] = {0};
 uint32_t avg_load_cell = 0;
-uint16_t loops = 0;
+uint32_t loops = 0;
+uint32_t good_vals = 0;
 uint8_t serial_out[LINE_BYTES];
 
 unsigned int ESC_pin = 9;
@@ -85,7 +88,8 @@ void got_tick() {
 void measure_and_print_rpm() {
   loops = 0;
   avg_load_cell = 0;
-  load_cell[SAMPLES] = {0};
+  // memset(load_cell, 0, sizeof(load_cell)); // Clear the array!
+  memset(load_cell_new, 0, sizeof(load_cell_new)); // Clear the array!
   times[0] = micros(); // Start time
   times[1] = micros(); // End time
   now = times[1];
@@ -93,9 +97,25 @@ void measure_and_print_rpm() {
   // WARNING: This code assumes that we can get at least #SAMPLES before we exit the loop
   // If we don't, then some of the load cell readings will still be 0
   // while ((times[1] - times[0] < DELTA_T) || (ticks == 0 && (times[1] - times[0] < 2*DELTA_T))) {
+  // Keep collecting samples in a fixed size buffer, and overwrite them if we exceed its size
+  // Note: we assume that we'll be able to collect more than SAMPLES values before we pass DELTA_T
+  // while ((now - times[0] < DELTA_T) || (ticks == 0 && (now - times[0] < 2*DELTA_T))) {
+  //   // NOTE: if we loop more than #SAMPLES times, we'll overwrite some values
+  //   load_cell[loops % SAMPLES] = DueAdcF.ReadAnalogPin(LOAD_pin);
+  //   // times[1] = micros();
+  //   now = micros();
+  //   loops++;
+  // }
+  // Collect SAMPLES values for each element of the array, then move forward to the next item.
+  // For each item that has collected all the samples, we can apply decimation.
+  // If we have more than one "full" value after decimation, we average the decimated values.
+  // If not, should we just do averaging? WARNING: how do we deal with the different number of bits?
+  // Note: the buffer of values must be bigger than the maximum number of (decimated)
+  // samples we can expect to collect in our DELTA_T
   while ((now - times[0] < DELTA_T) || (ticks == 0 && (now - times[0] < 2*DELTA_T))) {
-    // NOTE: if we loop more than #SAMPLES times, we'll overwrite some values
-    load_cell[loops % SAMPLES] = DueAdcF.ReadAnalogPin(LOAD_pin);
+    // NOTE: integer division on the index
+    // Collect SAMPLES values for each item, so we can apply decimation to them
+    load_cell_new[loops / SAMPLES] += DueAdcF.ReadAnalogPin(LOAD_pin);
     // times[1] = micros();
     now = micros();
     loops++;
@@ -103,18 +123,22 @@ void measure_and_print_rpm() {
   ticks_result = ticks; // Store the result asap to avoid more increments while preparing the printout
   times_result[1] = times[1]; // Save the end value first, since it has more chance of getting updated
   times_result[0] = times[0];
+  good_vals = loops / SAMPLES;
   // for (uint32_t i=0; i<min(loops, SAMPLES); i++) {
-  for (uint32_t i=0; i<SAMPLES; i++) {
-    avg_load_cell += load_cell[i];
+  // for (uint32_t i=0; i<(loops / SAMPLES); i++) {
+  for (uint32_t i=0; i<min(good_vals, SAMPLES_NEW); i++) {
+    avg_load_cell += load_cell_new[i] >> EXTRA_BITS;
   }
-  avg_load_cell = avg_load_cell >> EXTRA_BITS; // Decimation
+  // avg_load_cell = avg_load_cell >> EXTRA_BITS; // Decimation
   // avg_load_cell = avg_load_cell / SAMPLES; // Averaging
   // avg_load_cell = avg_load_cell / min(loops, SAMPLES); // Averaging
+  // avg_load_cell = avg_load_cell / good_vals; // Averaging
+  avg_load_cell = avg_load_cell / min(good_vals, SAMPLES_NEW); // Averaging
   (uint16_t &)serial_out[0] = (uint16_t)throttle;
   (uint32_t &)serial_out[2] = (uint32_t)times[0]; // Start time
   (uint16_t &)serial_out[6] = (uint16_t)ticks_result; // Ticks
   (uint32_t &)serial_out[8] = (uint32_t)times[1]; // End time
-  (uint16_t &)serial_out[12] = (uint16_t)avg_load_cell; // Load Cell
+  (uint32_t &)serial_out[12] = (uint32_t)avg_load_cell; // Load Cell
   mySerial.write((char *)serial_out, LINE_BYTES);
 }
 
