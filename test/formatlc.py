@@ -70,3 +70,22 @@ def plot_data_load_cell(log_file):
     ax.grid(True)
     ax.legend()
     plt.show()
+    # plt.show(block=False)
+
+    # all_timestamps = np.concatenate((timestamp1, timestamp2))
+    # all_timestamps.sort(kind='mergesort')
+    # dt1 = timestamp1[1:] - timestamp1[:-1]
+    # dt2 = timestamp2[1:] - timestamp2[:-1]
+    # dtall = all_timestamps[1:] - all_timestamps[:-1]
+    # fig, ax = plt.subplots(figsize=(10, 6))
+    # ax.plot(timestamp1[1:], dt1, label='Timestamp 1', color="orange", alpha=0.5)
+    # ax.plot(timestamp2[1:], dt2, label='Timestamp 2', color="green", alpha=0.5)
+    # ax.plot(all_timestamps[1:], dtall, marker='o', label='All samples', color="red", alpha=0.5)
+    # ax.xaxis.set_major_formatter(ticks_x)
+    # ax.yaxis.set_major_formatter(ticks_x)
+    # ax.set_xlabel('Time [s]')
+    # ax.set_ylabel('dt since last sample')
+    # ax.set_title(f'Sampling interval for {log_file}')
+    # ax.grid(True)
+    # ax.legend()
+    # plt.show()
