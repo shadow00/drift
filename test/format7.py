@@ -124,6 +124,24 @@ def plot_data_format7(log_file):
     ax.legend()
     plt.show(block=False)
 
+    # Load cell vs RPM
+    # Apply same downsampling to the RPM outputs
+    downsampled_rpm = rpm[:len(smoothed_load_cell):downsample_factor]
+
+    fig, ax = plt.subplots(figsize=(10, 6))
+    ax.plot(rpm, load_cell, label=f'RPM', color="orange", alpha=0.5)
+    ax.scatter(rpm, load_cell, marker='o', s=2, label='Data', alpha=0.5)
+    # ax.plot(downsampled_rpm, downsampled_load_cell, label=f'Downsampled (Factor = {downsample_factor})', color="orange", alpha=0.5)
+    # ax.scatter(downsampled_rpm, downsampled_load_cell, s=2, label=f'Downsampled (Factor = {downsample_factor})')
+    # ax.plot(xp, poly(xp), 'r-', label='Polynomial Regression')
+    # ax.fill_between(xp, poly(xp) - confidence, poly(xp) + confidence, color='gray', alpha=0.3, label='95% Confidence Interval')
+    ax.set_xlabel('Motor RPM')
+    ax.set_ylabel('Load Cell')
+    ax.set_title(f'Load Cell vs RPM {log_file} (downsampling = {downsample_factor})')
+    ax.grid(True)
+    ax.legend()
+    plt.show(block=False)
+
     # Load cell vs PWM
     # Apply same downsampling to the PWM inputs
     downsampled_throttle = throttle[:len(smoothed_load_cell):downsample_factor]
