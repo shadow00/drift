@@ -50,14 +50,14 @@ def plot_data_load_cell(log_file):
 
     # Downsampling the data
     downsample_factor = 100
-    downsampled_timestamp = timestamp1[:len(smoothed_load_cell):downsample_factor]
+    downsampled_timestamp = timestamp1[int(window_size/2):-int(window_size/2 - 1):downsample_factor]
     downsampled_load_cell = smoothed_load_cell[::downsample_factor]
 
     fig, ax = plt.subplots(figsize=(10, 6))
     # ax.scatter(timestamp, load_cell, marker='o', s=2, label='Data', alpha=0.5)
     ax.plot(timestamp1, load_cell, label='Data', alpha=0.5)
-    # ax.plot(timestamp[:len(smoothed_load_cell)], smoothed_load_cell, label=f'Smoothed (Window Size = {window_size})', linestyle='--')
-    # ax.scatter(timestamp[:len(smoothed_load_cell)], smoothed_load_cell, label=f'Smoothed (Window Size = {window_size})', s=2)
+    # ax.plot(timestamp1[int(window_size/2):-int(window_size/2 - 1)], smoothed_load_cell, label=f'Smoothed (Window Size = {window_size})', linestyle='--')
+    # ax.scatter(timestamp1[int(window_size/2):-int(window_size/2 - 1)], smoothed_load_cell, label=f'Smoothed (Window Size = {window_size})', s=2)
     ax.plot(downsampled_timestamp, downsampled_load_cell, label=f'Downsampled (Factor = {downsample_factor})', color="orange")
     # ax.plot(downsampled_timestamp, downsampled_load_cell, label=f'Downsampled (Factor = {downsample_factor})', color="blue")
     # ax.plot(xp, poly(xp), 'r-', label='Polynomial Regression')
