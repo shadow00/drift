@@ -43,6 +43,19 @@ def plot_data_format7(log_file):
     load_cell = np.array(load_cell)
     throttle = np.array(throttle)
     rpm = np.divide(hall_ticks / TICKS_PER_ROTATION, (timestamp2 - timestamp1) / 1e6) * 60
+    # Filter load cell data with a moving average, then downsample it
+    # Smoothing the data with a moving average filter
+    def moving_average(data, window_size):
+        return np.convolve(data, np.ones(window_size) / window_size, mode='valid')
+
+    window_size = 200  # Adjust this value based on the degree of smoothing desired
+    smoothed_load_cell = moving_average(load_cell, window_size)
+    # smoothed_load_cell = load_cell
+
+    # Downsampling the data
+    downsample_factor = 100
+    downsampled_timestamp2 = timestamp2[int(window_size/2):-int(window_size/2 - 1):downsample_factor]
+    downsampled_load_cell = smoothed_load_cell[::downsample_factor]
 
     # Plot RPM and Load Cell vs time
     fig, (ax1, ax2) = plt.subplots(2, 1)
@@ -77,6 +90,7 @@ def plot_data_format7(log_file):
     # Second subplot for comparison plot
     ax2 = plt.subplot(2, 1, 2)
     ax2.plot(timestamp2, load_cell, label='Load Cell', color='blue')
+    ax2.plot(timestamp2[int(window_size/2):-int(window_size/2 - 1)], smoothed_load_cell, label=f'Smoothed Load Cell (Factor = {window_size})', color="orange")
     ax2.set_xlabel('Timestamp')
     ax2.set_ylabel('Load Cell Result')
     ax2.set_title(f'Load Cell over time for {log_file} (Format 7)')
@@ -95,24 +109,10 @@ def plot_data_format7(log_file):
     plt.show(block=False)
 
     # Load cell vs time
-    # Filter load cell data with a moving average, then downsample it
-    # Smoothing the data with a moving average filter
-    def moving_average(data, window_size):
-        return np.convolve(data, np.ones(window_size) / window_size, mode='valid')
-
-    window_size = 200  # Adjust this value based on the degree of smoothing desired
-    smoothed_load_cell = moving_average(load_cell, window_size)
-    # smoothed_load_cell = load_cell
-
-    # Downsampling the data
-    downsample_factor = 100
-    downsampled_timestamp2 = timestamp2[:len(smoothed_load_cell):downsample_factor]
-    downsampled_load_cell = smoothed_load_cell[::downsample_factor]
-
     fig, ax = plt.subplots(figsize=(10, 6))
     # ax.scatter(timestamp2, load_cell, marker='o', s=2, label='Data', alpha=0.5)
-    # ax.plot(timestamp2[:len(smoothed_load_cell)], smoothed_load_cell, label=f'Smoothed (Window Size = {window_size})', linestyle='--')
-    ax.scatter(timestamp2[:len(smoothed_load_cell)], smoothed_load_cell, label=f'Smoothed (Window Size = {window_size})', s=2)
+    # ax.plot(timestamp2[int(window_size/2):-int(window_size/2 - 1)], smoothed_load_cell, label=f'Smoothed (Window Size = {window_size})', linestyle='--')
+    ax.scatter(timestamp2[int(window_size/2):-int(window_size/2 - 1)], smoothed_load_cell, label=f'Smoothed (Window Size = {window_size})', s=2)
     ax.plot(downsampled_timestamp2, downsampled_load_cell, label=f'Downsampled (Factor = {downsample_factor})', color="orange")
     # ax.plot(xp, poly(xp), 'r-', label='Polynomial Regression')
     # ax.fill_between(xp, poly(xp) - confidence, poly(xp) + confidence, color='gray', alpha=0.3, label='95% Confidence Interval')
@@ -126,13 +126,14 @@ def plot_data_format7(log_file):
 
     # Load cell vs RPM
     # Apply same downsampling to the RPM outputs
-    downsampled_rpm = rpm[:len(smoothed_load_cell):downsample_factor]
+    downsampled_rpm = rpm[int(window_size/2):-int(window_size/2 - 1):downsample_factor]
 
     fig, ax = plt.subplots(figsize=(10, 6))
-    ax.plot(rpm, load_cell, label=f'RPM', color="orange", alpha=0.5)
-    ax.scatter(rpm, load_cell, marker='o', s=2, label='Data', alpha=0.5)
-    # ax.plot(downsampled_rpm, downsampled_load_cell, label=f'Downsampled (Factor = {downsample_factor})', color="orange", alpha=0.5)
-    # ax.scatter(downsampled_rpm, downsampled_load_cell, s=2, label=f'Downsampled (Factor = {downsample_factor})')
+    # ax.plot(rpm, load_cell, label=f'RPM', color="orange", alpha=0.5)
+    # ax.scatter(rpm, load_cell, marker='o', s=2, label='Data', alpha=0.5)
+    # ax.plot(downsampled_rpm, downsampled_load_cell, label=f'Downsampled (Factor = {downsample_factor})', color="green", alpha=0.5)
+    ax.plot(downsampled_rpm, downsampled_load_cell, label=f'Downsampled (Factor = {downsample_factor})', color="orange", alpha=0.5)
+    ax.scatter(downsampled_rpm, downsampled_load_cell, s=2, label=f'Downsampled (Factor = {downsample_factor})')
     # ax.plot(xp, poly(xp), 'r-', label='Polynomial Regression')
     # ax.fill_between(xp, poly(xp) - confidence, poly(xp) + confidence, color='gray', alpha=0.3, label='95% Confidence Interval')
     ax.set_xlabel('Motor RPM')
@@ -144,7 +145,7 @@ def plot_data_format7(log_file):
 
     # Load cell vs PWM
     # Apply same downsampling to the PWM inputs
-    downsampled_throttle = throttle[:len(smoothed_load_cell):downsample_factor]
+    downsampled_throttle = throttle[int(window_size/2):-int(window_size/2 - 1):downsample_factor]
 
     fig, ax = plt.subplots(figsize=(10, 6))
     # ax.scatter(throttle, load_cell, marker='o', s=2, label='Data', alpha=0.5)
