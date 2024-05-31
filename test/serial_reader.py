@@ -53,7 +53,7 @@ class SerialReader(threading.Thread):
         threading.Thread.__init__(self)
         # circular buffer for storing serial data until it is
         # fetched by the GUI
-        self.buffer = np.zeros((1, CHANNELS), dtype=np.uint32)
+        self.buffer = np.empty((0, CHANNELS), dtype=np.uint32)
        
         self.channels = CHANNELS    # number of data channels to read
         self.channelsLC = CHANNELS_LC    # number of data channels to read
@@ -158,7 +158,7 @@ class SerialReader(threading.Thread):
                     # print("r2", resp2)
                 else:
                 # elif in_waiting > self.chunkSize * self.chunks:
-                    # print(f"Skipping {in_waiting} bytes")
+                    print(f"Skipping {in_waiting} bytes")
                     s.reset_input_buffer()
                     continue
                 # ----
